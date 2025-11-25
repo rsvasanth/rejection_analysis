@@ -1,0 +1,63 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+.Python
+
+# Frappe
+*.compiled
+*.css.map
+*.js.map
+sites/
+logs/
+.bench
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnp.*
+.yarn/
+.DS_Store
+
+# Build outputs
+rejection_analysis_console/dist/
+rejection_analysis_console/build/
+rejection_analysis/public/rejection_analysis_console/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vite
+rejection_analysis_console/.vite/
+rejection_analysis_console/vite.config.ts.timestamp-*
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
