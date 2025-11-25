@@ -34,8 +34,10 @@ export const UserProvider: FC<PropsWithChildren> = ({ children }) => {
                 return mutate(() => true, undefined, false)
             })
             .then(() => {
-                // Redirect to login page
-                window.location.replace('/rejection_analysis_console/login')
+                // ✅ FIX: Use correct path based on environment
+                const loginPath = import.meta.env.DEV ? '/login' : '/rejection_analysis_console/login'
+                console.log('🔍 Redirecting to:', loginPath)
+                window.location.replace(loginPath)
             })
             .catch((error) => {
                 toast.error('Failed to logout', {
