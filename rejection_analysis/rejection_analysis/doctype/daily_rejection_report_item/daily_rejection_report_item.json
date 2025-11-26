@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-25 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "inspection_entry",
+  "lot_no",
+  "column_break_1",
+  "product_ref_no",
+  "inspector_code",
+  "inspector_name",
+  "column_break_2",
+  "operator_name",
+  "machine_no",
+  "section_break_3",
+  "inspected_qty",
+  "rejected_qty",
+  "column_break_4",
+  "rejection_percentage",
+  "exceeds_threshold",
+  "car_required",
+  "column_break_5",
+  "car_created",
+  "car_reference",
+  "car_status",
+  "section_break_6",
+  "defect_summary"
+ ],
+ "fields": [
+  {
+   "fieldname": "inspection_entry",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Inspection Entry",
+   "options": "Inspection Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lot_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lot No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "product_ref_no",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Product",
+   "options": "Item"
+  },
+  {
+   "fieldname": "inspector_code",
+   "fieldtype": "Link",
+   "label": "Inspector",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "inspector_name",
+   "fieldtype": "Data",
+   "label": "Inspector Name"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator Name"
+  },
+  {
+   "fieldname": "machine_no",
+   "fieldtype": "Data",
+   "label": "Machine No"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Quantity & Rejection Details"
+  },
+  {
+   "fieldname": "inspected_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Inspected Qty"
+  },
+  {
+   "fieldname": "rejected_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rejected Qty"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rejection_percentage",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rejection %"
+  },
+  {
+   "fieldname": "exceeds_threshold",
+   "fieldtype": "Check",
+   "label": "Exceeds Threshold"
+  },
+  {
+   "fieldname": "car_required",
+   "fieldtype": "Check",
+   "label": "CAR Required"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "car_created",
+   "fieldtype": "Check",
+   "label": "CAR Created"
+  },
+  {
+   "fieldname": "car_reference",
+   "fieldtype": "Link",
+   "label": "CAR Reference",
+   "options": "Corrective Action Report"
+  },
+  {
+   "fieldname": "car_status",
+   "fieldtype": "Data",
+   "label": "CAR Status"
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "defect_summary",
+   "fieldtype": "Small Text",
+   "label": "Defect Summary"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Rejection Analysis",
+ "name": "Daily Rejection Report Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

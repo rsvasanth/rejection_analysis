@@ -1,0 +1,54 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-25 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "why_1",
+  "why_2",
+  "why_3",
+  "why_4",
+  "why_5"
+ ],
+ "fields": [
+  {
+   "fieldname": "why_1",
+   "fieldtype": "Small Text",
+   "label": "Why 1"
+  },
+  {
+   "fieldname": "why_2",
+   "fieldtype": "Small Text",
+   "label": "Why 2"
+  },
+  {
+   "fieldname": "why_3",
+   "fieldtype": "Small Text",
+   "label": "Why 3"
+  },
+  {
+   "fieldname": "why_4",
+   "fieldtype": "Small Text",
+   "label": "Why 4"
+  },
+  {
+   "fieldname": "why_5",
+   "fieldtype": "Small Text",
+   "label": "Why 5"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Rejection Analysis",
+ "name": "Five Why Analysis",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

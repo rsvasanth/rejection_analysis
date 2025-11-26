@@ -1,0 +1,231 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2025-11-25 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "car_date",
+  "inspection_entry",
+  "column_break_1",
+  "lot_no",
+  "product_ref_no",
+  "rejection_percentage",
+  "column_break_2",
+  "assigned_to",
+  "target_date",
+  "status",
+  "section_break_3",
+  "problem_description",
+  "section_break_4",
+  "cause_for_non_detection",
+  "section_break_5",
+  "cause_for_occurrence",
+  "section_break_6",
+  "corrective_action",
+  "section_break_7",
+  "five_why_analysis",
+  "section_break_8",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "CAR-.YYYY.-",
+   "reqd": 1,
+   "default": "CAR-.YYYY.-"
+  },
+  {
+   "fieldname": "car_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "CAR Date",
+   "reqd": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "inspection_entry",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Inspection Entry",
+   "options": "Inspection Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lot_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lot No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "product_ref_no",
+   "fieldtype": "Link",
+   "label": "Product",
+   "options": "Item"
+  },
+  {
+   "fieldname": "rejection_percentage",
+   "fieldtype": "Percent",
+   "label": "Rejection %"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Assigned To",
+   "options": "User"
+  },
+  {
+   "fieldname": "target_date",
+   "fieldtype": "Date",
+   "label": "Target Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Open\nIn Progress\nCompleted\nClosed",
+   "default": "Open"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Problem Description"
+  },
+  {
+   "fieldname": "problem_description",
+   "fieldtype": "Small Text",
+   "label": "Problem Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Cause Analysis"
+  },
+  {
+   "fieldname": "cause_for_non_detection",
+   "fieldtype": "Small Text",
+   "label": "Cause for Non Detection"
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "cause_for_occurrence",
+   "fieldtype": "Small Text",
+   "label": "Cause for Occurrence"
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break",
+   "label": "Corrective Action"
+  },
+  {
+   "fieldname": "corrective_action",
+   "fieldtype": "Small Text",
+   "label": "Corrective Action"
+  },
+  {
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "5 Why Analysis"
+  },
+  {
+   "fieldname": "five_why_analysis",
+   "fieldtype": "Table",
+   "label": "5 Why Analysis",
+   "options": "Five Why Analysis"
+  },
+  {
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Additional Information"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Corrective Action Report",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Rejection Analysis",
+ "name": "Corrective Action Report",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Quality Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
