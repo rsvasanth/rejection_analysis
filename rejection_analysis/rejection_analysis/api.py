@@ -538,9 +538,7 @@ def get_incoming_inspection_report(filters=None):
             mpe.mould_reference AS mould_ref,
             mpe.employee_name AS operator_name,
             mpe.moulding_date AS production_date,
-            
-            -- Job Card fields
-            jc.batch_no AS batch_no,
+            mpe.batch_no AS batch_no,
             
             -- Deflashing Receipt Entry fields
             dre.scan_deflashing_vendor AS deflasher_name,
@@ -1638,30 +1636,87 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         
         result = {
             "inspection_entry": inspection.name,
-            "lot_no": inspection.scan_lot_number or inspection.lot_no,
+            "lot_no": inspection.lot_no or "N/A",
             "stages": []
         }
         
         # Group defects by inspection type
+        # NOTE: inspection_type is at PARENT level, not in items
+        parent_inspection_type = inspection.inspection_type or ""
+        parent_total_inspected = int(flt(inspection.total_inspected_qty_nos or 0))
+        
         patrol_defects = []
         line_defects = []
         lot_defects = []
+        incoming_defects = []
         
         for item in inspection.items:
+            # Try different field names for defect type
+            defect_type = None
+            for field in ['type_of_defect', 'defect_type', 'defect', 'defect_name']:
+                if hasattr(item, field):
+                    defect_type = getattr(item, field)
+                    break
+            
+            # Try different field names for rejected qty
+            rejected_qty = 0
+            for field in ['rejected_qty', 'rejected_quantity', 'qty_rejected', 'rejection_qty']:
+                if hasattr(item, field):
+                    rejected_qty = int(flt(getattr(item, field) or 0))
+                    break
+            
+            # Skip if no rejection
+            if rejected_qty == 0:
+                continue
+            
             defect = {
-                "defect_type": item.type_of_defect or "Unknown",
-                "rejected_qty": int(flt(item.rejected_qty or 0)),
-                "inspected_qty": int(flt(item.inspected_qty or 0))
+                "defect_type": defect_type or "Unknown",
+                "rejected_qty": rejected_qty,
+                "inspected_qty": parent_total_inspected  # Use parent's total
             }
             
-            inspection_type_lower = (item.inspection_type or "").lower()
-            
-            if "patrol" in inspection_type_lower:
+            # Categorize based on PARENT inspection type
+            if "incoming" in parent_inspection_type.lower():
+                incoming_defects.append(defect)
+            elif "patrol" in parent_inspection_type.lower():
                 patrol_defects.append(defect)
-            elif "line" in inspection_type_lower:
+            elif "line" in parent_inspection_type.lower():
                 line_defects.append(defect)
-            elif "lot" in inspection_type_lower:
+            elif "lot" in parent_inspection_type.lower():
                 lot_defects.append(defect)
+        
+        # Log if no defects found to help debugging
+        if not patrol_defects and not line_defects and not lot_defects and not incoming_defects:
+            if inspection.items:
+                sample_item = inspection.items[0]
+                # Just log to console instead of Error Log to avoid character limits
+                import json
+                print(f"DEBUG: No defects found for {inspection_entry_name}")
+                print(f"DEBUG: Parent inspection type: {parent_inspection_type}")
+                print(f"DEBUG: Total inspected: {parent_total_inspected}")
+                print(f"DEBUG: Sample item has fields: {list(sample_item.as_dict().keys())}")
+        
+        
+        # Build INCOMING stage
+        if incoming_defects:
+            total_inspected_incoming = parent_total_inspected
+            total_rejected_incoming = sum(d['rejected_qty'] for d in incoming_defects)
+            rej_pct_incoming = (total_rejected_incoming / total_inspected_incoming * 100) if total_inspected_incoming > 0 else 0
+            
+            result["stages"].append({
+                "stage_name": "INCOMING INSPECTION",
+                "total_inspected": total_inspected_incoming,
+                "total_rejected": total_rejected_incoming,
+                "rejection_percentage": round(rej_pct_incoming, 2),
+                "defects": [
+                    {
+                        "defect_type": d["defect_type"],
+                        "rejected_qty": d["rejected_qty"],
+                        "percentage": round((d["rejected_qty"] / total_inspected_incoming * 100) if total_inspected_incoming > 0 else 0, 2)
+                    }
+                    for d in incoming_defects if d["rejected_qty"] > 0
+                ]
+            })
         
         # Build PATROL stage
         if patrol_defects:
@@ -1747,15 +1802,47 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
         # For SPP, we only have FINAL inspection stage
         final_defects = []
         
-        if hasattr(inspection, 'items') and inspection.items:
-            for item in inspection.items:
-                final_defects.append({
-                    "defect_type": item.type_of_defect or "Unknown",
-                    "rejected_qty": int(flt(item.rejected_qty or 0)),
-                    "inspected_qty": int(flt(item.inspected_qty or 0))
-                })
+        # Try different possible child table names
+        child_table = None
+        for possible_name in ['items', 'defect_details', 'inspection_details', 'quality_inspection_details']:
+            if hasattr(inspection, possible_name) and getattr(inspection, possible_name):
+                child_table = getattr(inspection, possible_name)
+                frappe.log_error(f"Found child table: {possible_name}", "SPP Child Table Detection")
+                break
         
-        if final_defects:
+        if child_table:
+            for item in child_table:
+                # Try different field names for defect type
+                defect_type = None
+                for field in ['type_of_defect', 'defect_type', 'defect', 'defect_name']:
+                    if hasattr(item, field):
+                        defect_type = getattr(item, field)
+                        break
+                
+                # Try different field names for rejected qty
+                rejected_qty = 0
+                for field in ['rejected_qty', 'rejected_quantity', 'qty_rejected', 'rejection_qty']:
+                    if hasattr(item, field):
+                        rejected_qty = int(flt(getattr(item, field) or 0))
+                        break
+                
+                # Try different field names for inspected qty  
+                inspected_qty = 0
+                for field in ['inspected_qty', 'inspected_quantity', 'qty_inspected', 'sample_size']:
+                    if hasattr(item, field):
+                        inspected_qty = int(flt(getattr(item, field) or 0))
+                        break
+                
+                final_defects.append({
+                    "defect_type": defect_type or "Unknown",
+                    "rejected_qty": rejected_qty,
+                    "inspected_qty": inspected_qty
+                })
+        else:
+            # No child table found, log the document structure
+            frappe.log_error(f"No child table found for SPP Entry {spp_inspection_entry_name}. Document fields: {dir(inspection)}", "SPP No Child Table")
+        
+        if final_defects and any(d['rejected_qty'] > 0 for d in final_defects):
             total_inspected = sum(d['inspected_qty'] for d in final_defects)
             total_rejected = sum(d['rejected_qty'] for d in final_defects)
             rej_pct = (total_rejected / total_inspected * 100) if total_inspected > 0 else 0
@@ -1780,3 +1867,168 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
     except Exception as e:
         frappe.log_error(f"Error fetching SPP rejection details: {str(e)}", "Get SPP Rejection Details")
         frappe.throw(str(e))
+
+
+# ============================================================================
+# DASHBOARD CHART DATA APIs
+# ============================================================================
+
+@frappe.whitelist()
+def get_defect_distribution_chart(days=30):
+    """Get defect type distribution for pie/bar charts."""
+    data = frappe.db.sql("""
+        SELECT 
+            iei.type_of_defect,
+            COUNT(*) as occurrence_count,
+            SUM(iei.rejected_qty) as total_rejected_qty
+        FROM `tabInspection Entry Item` iei
+        INNER JOIN `tabInspection Entry` ie ON ie.name = iei.parent
+        WHERE ie.docstatus = 1
+        AND ie.posting_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        AND iei.type_of_defect IS NOT NULL
+        AND iei.type_of_defect != ''
+        GROUP BY iei.type_of_defect
+        ORDER BY total_rejected_qty DESC
+        LIMIT 10
+    """, (days,), as_dict=True)
+    
+    total_rejected = sum([flt(d.get("total_rejected_qty", 0)) for d in data])
+    results = []
+    for row in data:
+        rejected_qty = flt(row.get("total_rejected_qty", 0))
+        results.append({
+            "defect_type": row.get("type_of_defect"),
+            "count": int(row.get("occurrence_count", 0)),
+            "total_rejected_qty": int(rejected_qty),
+            "percentage": round((rejected_qty / total_rejected * 100) if total_rejected > 0 else 0, 2)
+        })
+    return results
+
+
+@frappe.whitelist()
+def get_rejection_trend_chart(months=6):
+    """Get monthly rejection trends by inspection type."""
+    data = frappe.db.sql("""
+        SELECT 
+            DATE_FORMAT(ie.posting_date, '%%Y-%%m') as month,
+            DATE_FORMAT(ie.posting_date, '%%b %%Y') as month_label,
+            ie.inspection_type,
+            COUNT(*) as count,
+            AVG(ie.total_rejected_qty_in_percentage) as avg_rejection
+        FROM `tabInspection Entry` ie
+        WHERE ie.docstatus = 1
+        AND ie.posting_date >= DATE_SUB(CURDATE(), INTERVAL %s MONTH)
+        AND ie.inspection_type IN ('Patrol Inspection', 'Line Inspection', 'Lot Inspection', 'Incoming Inspection')
+        GROUP BY month, month_label, ie.inspection_type
+        ORDER BY month DESC, ie.inspection_type
+    """, (months,), as_dict=True)
+    
+    month_data = {}
+    for row in data:
+        month = row.get("month_label")
+        if month not in month_data:
+            month_data[month] = {"month": month, "patrol": 0, "line": 0, "lot": 0, "incoming": 0}
+        
+        if row.get("inspection_type") == "Patrol Inspection":
+            month_data[month]["patrol"] = round(flt(row.get("avg_rejection", 0)), 2)
+        elif row.get("inspection_type") == "Line Inspection":
+            month_data[month]["line"] = round(flt(row.get("avg_rejection", 0)), 2)
+        elif row.get("inspection_type") == "Lot Inspection":
+            month_data[month]["lot"] = round(flt(row.get("avg_rejection", 0)), 2)
+        elif row.get("inspection_type") == "Incoming Inspection":
+            month_data[month]["incoming"] = round(flt(row.get("avg_rejection", 0)), 2)
+    
+    return list(month_data.values())
+
+
+@frappe.whitelist()
+def get_stage_rejection_chart(date=None):
+    """Get rejection rates by inspection stage for a specific date."""
+    if not date:
+        date = today()
+    
+    stages_data = []
+    stages = [
+        {"type": "Patrol Inspection", "name": "Patrol", "color": "#3b82f6"},
+        {"type": "Line Inspection", "name": "Line", "color": "#8b5cf6"},
+        {"type": "Lot Inspection", "name": "Lot", "color": "#ef4444"},
+        {"type": "Incoming Inspection", "name": "Incoming", "color": "#f59e0b"}
+    ]
+    
+    for stage in stages:
+        result = frappe.db.sql("""
+            SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rejection
+            FROM `tabInspection Entry` ie
+            LEFT JOIN `tabMoulding Production Entry` mpe ON mpe.scan_lot_number = ie.lot_no
+            WHERE ie.inspection_type = %s AND ie.docstatus = 1
+            AND DATE_FORMAT(COALESCE(mpe.moulding_date, ie.posting_date), '%%Y-%%m-%%d') = %s
+        """, (stage["type"], date), as_dict=True)
+        
+        avg_rej = flt(result[0].get("avg_rejection", 0)) if result else 0
+        stages_data.append({
+            "stage": stage["name"],
+            "rejection_rate": round(avg_rej, 2),
+            "color": stage["color"]
+        })
+    
+    return stages_data
+
+
+@frappe.whitelist()
+def get_operator_performance_chart(days=30, limit=10):
+    """Get operator performance metrics."""
+    data = frappe.db.sql("""
+        SELECT 
+            mpe.employee_name as operator_name,
+            COUNT(DISTINCT ie.name) as inspection_count,
+            AVG(ie.total_rejected_qty_in_percentage) as avg_rejection_pct,
+            COUNT(CASE WHEN ie.total_rejected_qty_in_percentage > 5.0 THEN 1 END) as critical_count
+        FROM `tabMoulding Production Entry` mpe
+        LEFT JOIN `tabInspection Entry` ie
+            ON ie.lot_no = mpe.scan_lot_number
+            AND ie.inspection_type = 'Lot Inspection'
+            AND ie.docstatus = 1
+        WHERE mpe.docstatus = 1 AND mpe.employee_name IS NOT NULL AND ie.name IS NOT NULL
+        AND mpe.moulding_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        GROUP BY mpe.employee_name HAVING inspection_count > 5
+        ORDER BY avg_rejection_pct DESC LIMIT %s
+    """, (days, limit), as_dict=True)
+    
+    results = []
+    for row in data:
+        results.append({
+            "operator_name": row.get("operator_name"),
+            "inspection_count": int(row.get("inspection_count", 0)),
+            "avg_rejection_pct": round(flt(row.get("avg_rejection_pct", 0)), 2),
+            "critical_count": int(row.get("critical_count", 0))
+        })
+    return results
+
+
+@frappe.whitelist()
+def get_machine_performance_chart(days=30, limit=15):
+    """Get machine/press performance metrics."""
+    data = frappe.db.sql("""
+        SELECT 
+            ie.machine_no,
+            COUNT(*) as inspection_count,
+            AVG(ie.total_rejected_qty_in_percentage) as avg_rejection_pct,
+            COUNT(CASE WHEN ie.total_rejected_qty_in_percentage > 5.0 THEN 1 END) as critical_count
+        FROM `tabInspection Entry` ie
+        WHERE ie.docstatus = 1
+        AND ie.inspection_type IN ('Lot Inspection', 'Patrol Inspection', 'Line Inspection')
+        AND ie.machine_no IS NOT NULL
+        AND ie.posting_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        GROUP BY ie.machine_no HAVING inspection_count > 5
+        ORDER BY avg_rejection_pct DESC LIMIT %s
+    """, (days,limit), as_dict=True)
+    
+    results = []
+    for row in data:
+        results.append({
+            "machine_no": row.get("machine_no"),
+            "inspection_count": int(row.get("inspection_count", 0)),
+            "avg_rejection_pct": round(flt(row.get("avg_rejection_pct", 0)), 2),
+            "critical_count": int(row.get("critical_count", 0))
+        })
+    return results

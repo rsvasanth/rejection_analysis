@@ -24,7 +24,14 @@ from rejection_analysis.rejection_analysis.api import (
     save_five_why_analysis,
     generate_daily_report,
     generate_comprehensive_daily_report,
-    get_all_daily_reports
+    get_all_daily_reports,
+    get_inspection_rejection_details,
+    # Chart Data APIs
+    get_defect_distribution_chart,
+    get_rejection_trend_chart,
+    get_stage_rejection_chart,
+    get_operator_performance_chart,
+    get_machine_performance_chart
 )
 
 # Re-export all functions (this makes them accessible via rejection_analysis.api.*)
@@ -40,5 +47,12 @@ __all__ = [
     'save_five_why_analysis',
     'generate_daily_report',
     'generate_comprehensive_daily_report',
-    'get_all_daily_reports'
+    'get_all_daily_reports',
+    'get_inspection_rejection_details',
+    # Chart Data APIs
+    'get_defect_distribution_chart',
+    'get_rejection_trend_chart',
+    'get_stage_rejection_chart',
+    'get_operator_performance_chart',
+    'get_machine_performance_chart'
 ]
