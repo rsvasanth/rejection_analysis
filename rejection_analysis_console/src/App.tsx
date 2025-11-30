@@ -12,16 +12,16 @@ const router = createBrowserRouter(
     <>
       {/* Public Routes */}
       <Route path='/login' lazy={() => import('@/pages/auth/Login')} />
-      
+
       {/* Protected Routes - Wrapped with ProtectedRoute */}
       <Route path="/" element={<ProtectedRoute />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" lazy={() => import('@/pages/Dashboard')} />
+        <Route index element={<Navigate to="/rejection-analysis" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/rejection-analysis" replace />} />
         <Route path="/rejection-analysis" lazy={() => import('@/pages/RejectionAnalysis')} />
         <Route path="/reports" lazy={() => import('@/pages/Reports')} />
         <Route path="/settings" lazy={() => import('@/pages/Settings')} />
       </Route>
-      
+
       {/* 404 Not Found */}
       <Route path='*' lazy={() => import('@/pages/NotFound')} />
     </>

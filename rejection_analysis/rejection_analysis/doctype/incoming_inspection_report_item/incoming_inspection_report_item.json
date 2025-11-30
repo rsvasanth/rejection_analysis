@@ -1,0 +1,170 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-29 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "inspection_entry",
+  "date",
+  "lot_no",
+  "column_break_1",
+  "batch_no",
+  "item",
+  "mould_ref",
+  "column_break_2",
+  "deflasher_name",
+  "qty_sent",
+  "qty_received",
+  "diff_pct",
+  "section_break_3",
+  "inspector_name",
+  "insp_qty",
+  "rejected_qty",
+  "column_break_4",
+  "rej_pct",
+  "exceeds_threshold",
+  "section_break_5",
+  "car_required",
+  "car_reference",
+  "car_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "inspection_entry",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Inspection Entry",
+   "options": "Inspection Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Inspection Date"
+  },
+  {
+   "fieldname": "lot_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lot No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "label": "Batch No"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "mould_ref",
+   "fieldtype": "Data",
+   "label": "Mould Ref"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deflasher_name",
+   "fieldtype": "Data",
+   "label": "Deflasher"
+  },
+  {
+   "fieldname": "qty_sent",
+   "fieldtype": "Int",
+   "label": "Qty Sent"
+  },
+  {
+   "fieldname": "qty_received",
+   "fieldtype": "Int",
+   "label": "Qty Received"
+  },
+  {
+   "fieldname": "diff_pct",
+   "fieldtype": "Percent",
+   "label": "Difference %"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Inspection Details"
+  },
+  {
+   "fieldname": "inspector_name",
+   "fieldtype": "Data",
+   "label": "Inspector"
+  },
+  {
+   "fieldname": "insp_qty",
+   "fieldtype": "Int",
+   "label": "Inspected Qty"
+  },
+  {
+   "fieldname": "rejected_qty",
+   "fieldtype": "Int",
+   "label": "Rejected Qty"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rej_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rejection %"
+  },
+  {
+   "fieldname": "exceeds_threshold",
+   "fieldtype": "Check",
+   "label": "Exceeds Threshold"
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break",
+   "label": "CAR Details"
+  },
+  {
+   "fieldname": "car_required",
+   "fieldtype": "Check",
+   "label": "CAR Required"
+  },
+  {
+   "fieldname": "car_reference",
+   "fieldtype": "Link",
+   "label": "CAR Reference",
+   "options": "Corrective Action Report"
+  },
+  {
+   "fieldname": "car_status",
+   "fieldtype": "Data",
+   "label": "CAR Status",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Rejection Analysis",
+ "name": "Incoming Inspection Report Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

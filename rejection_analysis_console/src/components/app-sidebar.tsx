@@ -1,7 +1,7 @@
 import * as React from "react"
 import {
   IconChartBar,
-  IconDashboard,
+
   IconDatabase,
   IconFileAnalytics,
   IconHelp,
@@ -25,11 +25,7 @@ import {
 
 const data = {
   navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
-    },
+
     {
       title: "Rejection Analysis",
       url: "/rejection-analysis",

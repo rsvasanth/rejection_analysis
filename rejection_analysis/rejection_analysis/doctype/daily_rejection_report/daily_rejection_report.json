@@ -9,20 +9,38 @@
  "field_order": [
   "naming_series",
   "report_date",
-  "inspection_type",
   "column_break_1",
   "threshold_percentage",
   "status",
-  "section_break_2",
-  "total_inspections",
-  "total_inspected_qty",
-  "column_break_3",
-  "total_rejected_qty",
-  "average_rejection_percentage",
-  "column_break_4",
-  "lots_exceeding_threshold",
-  "section_break_5",
-  "inspection_entries",
+  "section_break_lot",
+  "lot_inspection_summary",
+  "lot_total_inspections",
+  "lot_avg_rejection",
+  "column_break_lot",
+  "lot_exceeding_threshold",
+  "lot_patrol_avg",
+  "lot_line_avg",
+  "section_break_lot_items",
+  "lot_inspection_items",
+  "section_break_incoming",
+  "incoming_inspection_summary",
+  "incoming_total_inspections",
+  "incoming_avg_rejection",
+  "column_break_incoming",
+  "incoming_exceeding_threshold",
+  "section_break_incoming_items",
+  "incoming_inspection_items",
+  "section_break_final",
+  "final_inspection_summary",
+  "final_total_inspections",
+  "final_avg_rejection",
+  "column_break_final",
+  "final_exceeding_threshold",
+  "final_patrol_avg",
+  "final_line_avg",
+  "final_lot_avg",
+  "section_break_final_items",
+  "final_inspection_items",
   "section_break_6",
   "generated_on",
   "generated_by",
@@ -49,14 +67,6 @@
    "default": "Today"
   },
   {
-   "fieldname": "inspection_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Inspection Type",
-   "options": "Lot Inspection\nIncoming Inspection\nFinal Visual Inspection\nLine Inspection\nPatrol Inspection",
-   "reqd": 1
-  },
-  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -77,59 +87,169 @@
    "default": "Draft"
   },
   {
-   "fieldname": "section_break_2",
+   "fieldname": "section_break_lot",
    "fieldtype": "Section Break",
-   "label": "Summary Metrics"
+   "label": "Lot Inspection Summary",
+   "collapsible": 1
   },
   {
-   "fieldname": "total_inspections",
+   "fieldname": "lot_inspection_summary",
+   "fieldtype": "HTML",
+   "label": "Summary",
+   "options": "<div class=\"text-muted\">Lot inspection metrics will be displayed here</div>"
+  },
+  {
+   "fieldname": "lot_total_inspections",
    "fieldtype": "Int",
-   "label": "Total Inspections",
+   "label": "Total Lots",
    "read_only": 1
   },
   {
-   "fieldname": "total_inspected_qty",
-   "fieldtype": "Float",
-   "label": "Total Inspected Qty",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "total_rejected_qty",
-   "fieldtype": "Float",
-   "label": "Total Rejected Qty",
-   "read_only": 1
-  },
-  {
-   "fieldname": "average_rejection_percentage",
+   "fieldname": "lot_avg_rejection",
    "fieldtype": "Percent",
    "label": "Avg Rejection %",
    "read_only": 1
   },
   {
-   "fieldname": "column_break_4",
+   "fieldname": "column_break_lot",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "lots_exceeding_threshold",
+   "fieldname": "lot_exceeding_threshold",
    "fieldtype": "Int",
-   "label": "Lots Exceeding Threshold",
+   "label": "Critical Lots",
    "read_only": 1
   },
   {
-   "fieldname": "section_break_5",
-   "fieldtype": "Section Break",
-   "label": "Inspection Entries"
+   "fieldname": "lot_patrol_avg",
+   "fieldtype": "Percent",
+   "label": "Patrol Avg %",
+   "read_only": 1
   },
   {
-   "fieldname": "inspection_entries",
+   "fieldname": "lot_line_avg",
+   "fieldtype": "Percent",
+   "label": "Line Avg %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_lot_items",
+   "fieldtype": "Section Break",
+   "label": "Lot Inspection Records"
+  },
+  {
+   "fieldname": "lot_inspection_items",
    "fieldtype": "Table",
-   "label": "Inspection Entries",
-   "options": "Daily Rejection Report Item",
-   "reqd": 1
+   "label": "Lot Inspection Items",
+   "options": "Lot Inspection Report Item"
+  },
+  {
+   "fieldname": "section_break_incoming",
+   "fieldtype": "Section Break",
+   "label": "Incoming Inspection Summary",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "incoming_inspection_summary",
+   "fieldtype": "HTML",
+   "label": "Summary",
+   "options": "<div class=\"text-muted\">Incoming inspection metrics will be displayed here</div>"
+  },
+  {
+   "fieldname": "incoming_total_inspections",
+   "fieldtype": "Int",
+   "label": "Total Lots",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incoming_avg_rejection",
+   "fieldtype": "Percent",
+   "label": "Avg Rejection %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_incoming",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "incoming_exceeding_threshold",
+   "fieldtype": "Int",
+   "label": "Critical Lots",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_incoming_items",
+   "fieldtype": "Section Break",
+   "label": "Incoming Inspection Records"
+  },
+  {
+   "fieldname": "incoming_inspection_items",
+   "fieldtype": "Table",
+   "label": "Incoming Inspection Items",
+   "options": "Incoming Inspection Report Item"
+  },
+  {
+   "fieldname": "section_break_final",
+   "fieldtype": "Section Break",
+   "label": "Final Visual Inspection Summary",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "final_inspection_summary",
+   "fieldtype": "HTML",
+   "label": "Summary",
+   "options": "<div class=\"text-muted\">Final inspection metrics will be displayed here</div>"
+  },
+  {
+   "fieldname": "final_total_inspections",
+   "fieldtype": "Int",
+   "label": "Total Lots",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_avg_rejection",
+   "fieldtype": "Percent",
+   "label": "Avg Final Rejection %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_final",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "final_exceeding_threshold",
+   "fieldtype": "Int",
+   "label": "Critical Lots",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_patrol_avg",
+   "fieldtype": "Percent",
+   "label": "Patrol Avg %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_line_avg",
+   "fieldtype": "Percent",
+   "label": "Line Avg %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_lot_avg",
+   "fieldtype": "Percent",
+   "label": "Lot Avg %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_final_items",
+   "fieldtype": "Section Break",
+   "label": "Final Inspection Records"
+  },
+  {
+   "fieldname": "final_inspection_items",
+   "fieldtype": "Table",
+   "label": "Final Inspection Items",
+   "options": "Final Inspection Report Item"
   },
   {
    "fieldname": "section_break_6",

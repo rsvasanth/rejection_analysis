@@ -11,33 +11,92 @@ from frappe.utils import now
 class CorrectiveActionReport(Document):
 	def validate(self):
 		self.validate_dates()
-		self.update_car_status_in_report()
+		# Only update CAR status if the document already exists (not on first insert)
+		if not self.is_new():
+			self.update_car_status_in_report()
 
 	def validate_dates(self):
 		"""Validate CAR date and target date"""
-		if self.car_date > frappe.utils.today():
-			frappe.throw(_("CAR date cannot be in the future"))
+		from frappe.utils import getdate
+		
+		# Ensure dates are date objects, not strings - be very defensive
+		if self.car_date:
+			if isinstance(self.car_date, str):
+				self.car_date = getdate(self.car_date)
+		
+		if self.target_date:
+			if isinstance(self.target_date, str):
+				self.target_date = getdate(self.target_date)
+		
+		# Now safely compare dates
+		try:
+			if self.car_date and self.car_date > frappe.utils.today():
+				frappe.throw(_("CAR date cannot be in the future"))
 
-		if self.target_date and self.target_date < self.car_date:
-			frappe.throw(_("Target date cannot be before CAR date"))
+			if self.target_date and self.car_date and self.target_date < self.car_date:
+				frappe.throw(_("Target date cannot be before CAR date"))
+		except (TypeError, AttributeError) as e:
+			# If comparison still fails, convert and retry
+			frappe.log_error(f"Date validation error: {str(e)}", "CAR Date Validation")
+			self.car_date = getdate(self.car_date) if self.car_date else frappe.utils.today()
+			if self.target_date:
+				self.target_date = getdate(self.target_date)
 
 	def update_car_status_in_report(self):
 		"""Update CAR status in the related Daily Rejection Report"""
 		if self.inspection_entry:
-			# Find the daily rejection report item that references this inspection entry
-			report_items = frappe.get_all(
-				"Daily Rejection Report Item",
+			# Check all three child tables for the inspection entry
+			# Lot Inspection Report Item
+			lot_items = frappe.get_all(
+				"Lot Inspection Report Item",
 				filters={"inspection_entry": self.inspection_entry},
 				fields=["name", "parent"]
 			)
-
-			if report_items:
-				# Update the CAR status in the report item
+			
+			if lot_items:
 				frappe.db.set_value(
-					"Daily Rejection Report Item",
-					report_items[0].name,
-					"car_status",
-					self.status
+					"Lot Inspection Report Item",
+					lot_items[0].name,
+					{
+						"car_reference": self.name,
+						"car_status": self.status
+					}
+				)
+				return
+			
+			# Incoming Inspection Report Item
+			incoming_items = frappe.get_all(
+				"Incoming Inspection Report Item",
+				filters={"inspection_entry": self.inspection_entry},
+				fields=["name", "parent"]
+			)
+			
+			if incoming_items:
+				frappe.db.set_value(
+					"Incoming Inspection Report Item",
+					incoming_items[0].name,
+					{
+						"car_reference": self.name,
+						"car_status": self.status
+					}
+				)
+				return
+			
+			# Final Inspection Report Item (uses spp_inspection_entry field)
+			final_items = frappe.get_all(
+				"Final Inspection Report Item",
+				filters={"spp_inspection_entry": self.inspection_entry},
+				fields=["name", "parent"]
+			)
+			
+			if final_items:
+				frappe.db.set_value(
+					"Final Inspection Report Item",
+					final_items[0].name,
+					{
+						"car_reference": self.name,
+						"car_status": self.status
+					}
 				)
 
 	def before_submit(self):
@@ -45,19 +104,52 @@ class CorrectiveActionReport(Document):
 			frappe.throw(_("Corrective Action is required before submitting"))
 
 	def on_submit(self):
-		# Mark CAR as created in the report
+		# Mark CAR as created in the report (check all three child tables)
 		if self.inspection_entry:
-			report_items = frappe.get_all(
-				"Daily Rejection Report Item",
+			# Lot Inspection Report Item
+			lot_items = frappe.get_all(
+				"Lot Inspection Report Item",
 				filters={"inspection_entry": self.inspection_entry},
 				fields=["name"]
 			)
-
-			if report_items:
+			
+			if lot_items:
 				frappe.db.set_value(
-					"Daily Rejection Report Item",
-					report_items[0].name,
-					"car_created",
+					"Lot Inspection Report Item",
+					lot_items[0].name,
+					"car_required",
+					1
+				)
+				return
+			
+			# Incoming Inspection Report Item
+			incoming_items = frappe.get_all(
+				"Incoming Inspection Report Item",
+				filters={"inspection_entry": self.inspection_entry},
+				fields=["name"]
+			)
+			
+			if incoming_items:
+				frappe.db.set_value(
+					"Incoming Inspection Report Item",
+					incoming_items[0].name,
+					"car_required",
+					1
+				)
+				return
+			
+			# Final Inspection Report Item
+			final_items = frappe.get_all(
+				"Final Inspection Report Item",
+				filters={"spp_inspection_entry": self.inspection_entry},
+				fields=["name"]
+			)
+			
+			if final_items:
+				frappe.db.set_value(
+					"Final Inspection Report Item",
+					final_items[0].name,
+					"car_required",
 					1
 				)
 

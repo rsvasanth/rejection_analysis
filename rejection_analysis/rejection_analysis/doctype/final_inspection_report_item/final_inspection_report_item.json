@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-29 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "spp_inspection_entry",
+  "production_date",
+  "lot_no",
+  "column_break_1",
+  "shift_type",
+  "operator_name",
+  "press_number",
+  "column_break_2",
+  "item",
+  "mould_ref",
+  "section_break_3",
+  "patrol_rej_pct",
+  "line_rej_pct",
+  "lot_rej_pct",
+  "column_break_4",
+  "final_insp_rej_pct",
+  "exceeds_threshold",
+  "section_break_5",
+  "final_inspector",
+  "final_insp_qty",
+  "final_rej_qty",
+  "column_break_6",
+  "warehouse",
+  "stage",
+  "section_break_7",
+  "car_required",
+  "car_reference",
+  "car_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "spp_inspection_entry",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "SPP Inspection Entry",
+   "options": "SPP Inspection Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Production Date"
+  },
+  {
+   "fieldname": "lot_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Lot No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shift_type",
+   "fieldtype": "Data",
+   "label": "Shift"
+  },
+  {
+   "fieldname": "operator_name",
+   "fieldtype": "Data",
+   "label": "Operator"
+  },
+  {
+   "fieldname": "press_number",
+   "fieldtype": "Data",
+   "label": "Press"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "mould_ref",
+   "fieldtype": "Data",
+   "label": "Mould Ref"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Rejection Stages"
+  },
+  {
+   "fieldname": "patrol_rej_pct",
+   "fieldtype": "Percent",
+   "label": "Patrol Rej %"
+  },
+  {
+   "fieldname": "line_rej_pct",
+   "fieldtype": "Percent",
+   "label": "Line Rej %"
+  },
+  {
+   "fieldname": "lot_rej_pct",
+   "fieldtype": "Percent",
+   "label": "Lot Rej %"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "final_insp_rej_pct",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Final Rej %"
+  },
+  {
+   "fieldname": "exceeds_threshold",
+   "fieldtype": "Check",
+   "label": "Exceeds Threshold"
+  },
+  {
+   "fieldname": "section_break_5",
+   "fieldtype": "Section Break",
+   "label": "Final Inspection Details"
+  },
+  {
+   "fieldname": "final_inspector",
+   "fieldtype": "Data",
+   "label": "Inspector"
+  },
+  {
+   "fieldname": "final_insp_qty",
+   "fieldtype": "Int",
+   "label": "Inspected Qty"
+  },
+  {
+   "fieldname": "final_rej_qty",
+   "fieldtype": "Int",
+   "label": "Rejected Qty"
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Data",
+   "label": "Stage"
+  },
+  {
+   "fieldname": "section_break_7",
+   "fieldtype": "Section Break",
+   "label": "CAR Details"
+  },
+  {
+   "fieldname": "car_required",
+   "fieldtype": "Check",
+   "label": "CAR Required"
+  },
+  {
+   "fieldname": "car_reference",
+   "fieldtype": "Link",
+   "label": "CAR Reference",
+   "options": "Corrective Action Report"
+  },
+  {
+   "fieldname": "car_status",
+   "fieldtype": "Data",
+   "label": "CAR Status",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Rejection Analysis",
+ "name": "Final Inspection Report Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
