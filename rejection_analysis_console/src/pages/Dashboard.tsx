@@ -75,6 +75,13 @@ function DashboardPage() {
         fetchStageRejections()
       ])
 
+      console.log('Dashboard Data Loaded:', {
+        metrics: metricsResult,
+        trendCount: trendResult.length,
+        trendSample: trendResult[0],
+        defectCount: defectsResult.length,
+        stageCount: stagesResult.length
+      })
       setMetrics(metricsResult)
       setTrendData(trendResult)
       setDefectData(defectsResult)

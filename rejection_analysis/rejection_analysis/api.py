@@ -1944,34 +1944,45 @@ def get_rejection_trend_chart(months=6):
 @frappe.whitelist()
 def get_stage_rejection_chart(date=None):
     """Get rejection rates by inspection stage for a specific date."""
-    if not date:
-        date = today()
-    
-    stages_data = []
-    stages = [
-        {"type": "Patrol Inspection", "name": "Patrol", "color": "#3b82f6"},
-        {"type": "Line Inspection", "name": "Line", "color": "#8b5cf6"},
-        {"type": "Lot Inspection", "name": "Lot", "color": "#ef4444"},
-        {"type": "Incoming Inspection", "name": "Incoming", "color": "#f59e0b"}
-    ]
-    
-    for stage in stages:
-        result = frappe.db.sql("""
-            SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rejection
-            FROM `tabInspection Entry` ie
-            LEFT JOIN `tabMoulding Production Entry` mpe ON mpe.scan_lot_number = ie.lot_no
-            WHERE ie.inspection_type = %s AND ie.docstatus = 1
-            AND DATE_FORMAT(COALESCE(mpe.moulding_date, ie.posting_date), '%%Y-%%m-%%d') = %s
-        """, (stage["type"], date), as_dict=True)
+    try:
+        if not date:
+            date = today()
         
-        avg_rej = flt(result[0].get("avg_rejection", 0)) if result else 0
-        stages_data.append({
-            "stage": stage["name"],
-            "rejection_rate": round(avg_rej, 2),
-            "color": stage["color"]
-        })
-    
-    return stages_data
+        stages_data = []
+        stages = [
+            {"type": "Patrol Inspection", "name": "Patrol", "color": "#3b82f6"},
+            {"type": "Line Inspection", "name": "Line", "color": "#8b5cf6"},
+            {"type": "Lot Inspection", "name": "Lot", "color": "#ef4444"},
+            {"type": "Incoming Inspection", "name": "Incoming", "color": "#f59e0b"}
+        ]
+        
+        for stage in stages:
+            # Simplified query - just use posting_date instead of complex join
+            result = frappe.db.sql("""
+                SELECT AVG(total_rejected_qty_in_percentage) as avg_rejection
+                FROM `tabInspection Entry`
+                WHERE inspection_type = %s 
+                AND docstatus = 1
+                AND DATE(posting_date) = %s
+            """, (stage["type"], date), as_dict=True)
+            
+            avg_rej = flt(result[0].get("avg_rejection", 0)) if result and result[0].get("avg_rejection") else 0
+            stages_data.append({
+                "stage": stage["name"],
+                "rejection_rate": round(avg_rej, 2),
+                "color": stage["color"]
+            })
+        
+        return stages_data
+    except Exception as e:
+        frappe.log_error(f"Error in get_stage_rejection_chart: {str(e)}", "Stage Rejection Chart")
+        # Return empty stages so chart doesn't break
+        return [
+            {"stage": "Patrol", "rejection_rate": 0, "color": "#3b82f6"},
+            {"stage": "Line", "rejection_rate": 0, "color": "#8b5cf6"},
+            {"stage": "Lot", "rejection_rate": 0, "color": "#ef4444"},
+            {"stage": "Incoming", "rejection_rate": 0, "color": "#f59e0b"}
+        ]
 
 
 @frappe.whitelist()
