@@ -541,10 +541,8 @@ def get_incoming_inspection_report(filters=None):
             mpe.batch_no AS batch_no,
             
             -- Deflashing Receipt Entry fields
-            dre.scan_deflashing_vendor AS deflasher_name,
+            COALESCE(SUBSTRING_INDEX(wh.warehouse_name, ': ', -1), dre.scan_deflashing_vendor) AS deflasher_name,
             dre.qty_despatched_nos AS qty_sent,
-            dre.qty_received_nos AS qty_received,
-            dre.difference_nos_percentage AS diff_pct,
             dre.qty_received_nos AS qty_received,
             dre.difference_nos_percentage AS diff_pct,
             dre.posting_date AS receipt_date,
@@ -565,6 +563,10 @@ def get_incoming_inspection_report(filters=None):
         LEFT JOIN `tabDeflashing Receipt Entry` dre 
             ON dre.lot_number = mpe.scan_lot_number
             AND dre.docstatus = 1
+            
+        -- Left join to Warehouse for Deflasher Name (mapped via barcode)
+        LEFT JOIN `tabWarehouse` wh
+            ON wh.barcode_text = dre.scan_deflashing_vendor
         
         -- Left join to Job Card for batch information
         LEFT JOIN `tabJob Card` jc 
