@@ -29,6 +29,7 @@ interface FinalInspectionRecord {
     threshold_percentage: number
     car_name?: string
     car_status?: string
+    trimming_operator?: string
 }
 
 interface GroupedLot {
@@ -48,6 +49,7 @@ interface GroupedLot {
     item: string
     mould_ref: string
     shift_type: string | null
+    trimming_operator: string
     most_critical_sublot: FinalInspectionRecord  // The sublot with highest rejection %
 }
 
@@ -110,6 +112,7 @@ export function FinalInspectionGroupedTable({
                 item: first.item,
                 mould_ref: first.mould_ref,
                 shift_type: first.shift_type,
+                trimming_operator: first.trimming_operator || '—',
                 most_critical_sublot: mostCriticalSublot  // Add this for parent row CAR generation
             })
         })
@@ -176,6 +179,7 @@ export function FinalInspectionGroupedTable({
                             <TableHead className="w-[80px]">Item</TableHead>
                             <TableHead className="w-[90px]">Mould</TableHead>
                             <TableHead className="w-[90px]">Lot No</TableHead>
+                            <TableHead className="w-[110px]">Trimming</TableHead>
                             <TableHead className="w-[70px] text-center">Qty</TableHead>
                             <TableHead className="w-[70px] text-center">Rej Qty</TableHead>
                             <TableHead className="w-[70px] text-center">Patrol</TableHead>
@@ -224,12 +228,17 @@ export function FinalInspectionGroupedTable({
                                         <TableCell className="font-mono font-semibold text-xs">
                                             {group.base_lot_no}
                                             {hasMultipleSublots && (
-                                                <span className="ml-1 text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                                                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">
                                                     {group.sublots.length}
-                                                </span>
+                                                </Badge>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-center text-xs font-bold">{group.total_insp_qty.toLocaleString()}</TableCell>
+                                        <TableCell className="text-xs truncate max-w-[110px]" title={group.trimming_operator}>
+                                            {group.trimming_operator || '—'}
+                                        </TableCell>
+                                        <TableCell className="text-center font-bold text-xs">
+                                            {group.total_insp_qty.toLocaleString()}
+                                        </TableCell>
                                         <TableCell className="text-center text-xs font-bold">{group.total_rej_qty.toLocaleString()}</TableCell>
                                         <TableCell className={`text-center text-xs ${getRejectionColor(group.avg_patrol_rej_pct)}`}>
                                             {group.avg_patrol_rej_pct.toFixed(1)}%
@@ -301,6 +310,9 @@ export function FinalInspectionGroupedTable({
                                             <TableCell className="text-xs"></TableCell>
                                             <TableCell className="text-xs"></TableCell>
                                             <TableCell className="font-mono text-xs pl-4">└ {record.lot_no}</TableCell>
+                                            <TableCell className="text-xs truncate max-w-[110px]" title={record.trimming_operator}>
+                                                {record.trimming_operator || '—'}
+                                            </TableCell>
                                             <TableCell className="text-center text-xs">{record.final_insp_qty.toLocaleString()}</TableCell>
                                             <TableCell className="text-center text-xs">{record.final_rej_qty.toLocaleString()}</TableCell>
                                             <TableCell className={`text-center text-xs ${getRejectionColor(record.patrol_rej_pct)}`}>

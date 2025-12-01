@@ -880,6 +880,25 @@ def get_final_inspection_report(filters=None):
         lot_no = row.get("lot_no") or ""
         base_lot_no = lot_no.split('-')[0] if '-' in lot_no else lot_no
         
+        # Fetch Trimming Operator safely
+        trimming_operator = "—"
+        try:
+            # Try fetching from SPP Lot Resource Tagging
+            # Note: Using batch_no as it links to the lot number
+            trimming_data = frappe.db.sql("""
+                SELECT GROUP_CONCAT(DISTINCT operator_name SEPARATOR ', ') as operator_name
+                FROM `tabSPP Lot Resource Tagging`
+                WHERE batch_no = %s
+                AND operation_type IN ('ID Trimming', 'OD Trimming', 'Trimming')
+                AND docstatus = 1
+            """, (lot_no,), as_dict=True)
+            
+            if trimming_data and trimming_data[0].operator_name:
+                trimming_operator = trimming_data[0].operator_name
+        except Exception:
+            # Ignore errors if table doesn't exist or other issues
+            pass
+        
         result = {
             "spp_inspection_entry": row.get("spp_inspection_entry"),
             "inspection_date": str(row.get("inspection_date")) if row.get("inspection_date") else None,
@@ -898,6 +917,7 @@ def get_final_inspection_report(filters=None):
             "final_inspector": row.get("final_inspector"),
             "final_insp_qty": int(flt(row.get("final_insp_qty", 0))),
             "final_rej_qty": int(flt(row.get("final_rej_qty", 0))),
+            "trimming_operator": trimming_operator,
             "warehouse": row.get("warehouse"),
             "stage": row.get("stage"),
             "exceeds_threshold": flt(row.get("final_insp_rej_pct", 0)) > threshold,
