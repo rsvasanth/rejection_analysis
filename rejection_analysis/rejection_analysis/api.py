@@ -883,20 +883,33 @@ def get_final_inspection_report(filters=None):
         # Fetch Trimming Operator safely
         trimming_operator = "—"
         try:
-            # Try fetching from SPP Lot Resource Tagging
-            # Note: Using batch_no as it links to the lot number
+            # 1. Try fetching from SPP Lot Resource Tagging (Smart Screens app)
             trimming_data = frappe.db.sql("""
                 SELECT GROUP_CONCAT(DISTINCT operator_name SEPARATOR ', ') as operator_name
                 FROM `tabSPP Lot Resource Tagging`
-                WHERE batch_no = %s
+                WHERE (batch_no = %s OR batch_no = %s)
                 AND operation_type IN ('ID Trimming', 'OD Trimming', 'Trimming')
                 AND docstatus = 1
-            """, (lot_no,), as_dict=True)
+            """, (lot_no, base_lot_no), as_dict=True)
             
             if trimming_data and trimming_data[0].operator_name:
                 trimming_operator = trimming_data[0].operator_name
+            
+            # 2. If not found, try Lot Resource Tagging (Shree Polymer Custom app)
+            if trimming_operator == "—":
+                trimming_data_old = frappe.db.sql("""
+                    SELECT GROUP_CONCAT(DISTINCT operator_name SEPARATOR ', ') as operator_name
+                    FROM `tabLot Resource Tagging`
+                    WHERE (scan_lot_no = %s OR scan_lot_no = %s)
+                    AND operation_type IN ('ID Trimming', 'OD Trimming', 'Trimming')
+                    AND docstatus = 1
+                """, (lot_no, base_lot_no), as_dict=True)
+                
+                if trimming_data_old and trimming_data_old[0].operator_name:
+                    trimming_operator = trimming_data_old[0].operator_name
+                    
         except Exception:
-            # Ignore errors if table doesn't exist or other issues
+            # Ignore errors if tables don't exist
             pass
         
         result = {
