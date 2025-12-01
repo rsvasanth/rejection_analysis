@@ -48,6 +48,7 @@ interface GroupedLot {
     item: string
     mould_ref: string
     shift_type: string | null
+    most_critical_sublot: FinalInspectionRecord  // The sublot with highest rejection %
 }
 
 export function FinalInspectionGroupedTable({
@@ -85,6 +86,11 @@ export function FinalInspectionGroupedTable({
             const avg_line_rej_pct = sublots.reduce((sum, r) => sum + r.line_rej_pct, 0) / sublots.length
             const avg_lot_rej_pct = sublots.reduce((sum, r) => sum + r.lot_rej_pct, 0) / sublots.length
 
+            // Find the sublot with highest rejection percentage for CAR generation
+            const mostCriticalSublot = sublots.reduce((max, current) =>
+                current.final_insp_rej_pct > max.final_insp_rej_pct ? current : max
+            )
+
             // Use data from first sublot for common fields
             const first = sublots[0]
 
@@ -103,7 +109,8 @@ export function FinalInspectionGroupedTable({
                 press_number: first.press_number,
                 item: first.item,
                 mould_ref: first.mould_ref,
-                shift_type: first.shift_type
+                shift_type: first.shift_type,
+                most_critical_sublot: mostCriticalSublot  // Add this for parent row CAR generation
             })
         })
 
@@ -254,9 +261,29 @@ export function FinalInspectionGroupedTable({
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-xs text-muted-foreground">
-                                                {hasMultipleSublots ? `${group.sublots.length} sub-lots` : '—'}
-                                            </span>
+                                            {!hasMultipleSublots && group.exceeds_threshold ? (
+                                                // Single lot with high rejection - show Generate CAR button
+                                                <Button
+                                                    size="sm"
+                                                    variant={group.sublots[0].car_name ? "default" : "outline"}
+                                                    onClick={() => onGenerateCAR(group.sublots[0])}
+                                                    className={`text-[10px] h-6 px-2 ${group.sublots[0].car_name ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                                                >
+                                                    {group.sublots[0].car_name ? (
+                                                        <>
+                                                            <Save className="h-3 w-3 mr-1" />
+                                                            Update
+                                                        </>
+                                                    ) : (
+                                                        "Generate CAR"
+                                                    )}
+                                                </Button>
+                                            ) : (
+                                                // Multiple sublots or normal rejection - show sublot count
+                                                <span className="text-xs text-muted-foreground">
+                                                    {hasMultipleSublots ? `${group.sublots.length} sub-lots` : '—'}
+                                                </span>
+                                            )}
                                         </TableCell>
                                     </TableRow>
 
