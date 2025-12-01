@@ -1305,25 +1305,59 @@ function RejectionAnalysisPage() {
 
           {/* Incoming Inspection Tab */}
           <TabsContent value="incoming" className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <MetricCard
-                label="Lots Received"
-                value={incomingMetrics?.total_lots || 0}
-                loading={incomingLoading}
-                icon={ClipboardCheck}
-              />
-              <MetricCard
-                label="Pending"
-                value={incomingMetrics?.pending_lots || 0}
-                loading={incomingLoading}
-              />
-              <MetricCard
-                label="Avg Rejection"
-                value={incomingMetrics?.avg_rejection ? `${incomingMetrics.avg_rejection}%` : '—'}
-                trend={incomingMetrics && incomingMetrics.avg_rejection > 3 ? 'up' : 'down'}
-                loading={incomingLoading}
-              />
-            </div>
+            {/* Compact Metrics Row */}
+            <Card className="border shadow-sm">
+              <CardContent className="py-1.5 px-4">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Total & Pending */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-purple-100 flex items-center justify-center">
+                      <ClipboardCheck className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Lots Received</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <p className="text-lg font-bold">{incomingMetrics?.total_lots || 0}</p>
+                        <span className="text-[10px] text-muted-foreground">Pending:</span>
+                        <span className="text-xs font-semibold text-orange-600">{incomingMetrics?.pending_lots || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-border"></div>
+
+                  {/* Avg Rejection */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Avg Rejection</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${incomingMetrics && incomingMetrics.avg_rejection > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {incomingMetrics?.avg_rejection ? `${incomingMetrics.avg_rejection.toFixed(1)}%` : '—'}
+                        </p>
+                        {incomingMetrics && incomingMetrics.avg_rejection > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-border"></div>
+
+                  {/* Critical Lots */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Critical</p>
+                      <p className="text-lg font-bold text-red-600">{incomingMetrics?.lots_exceeding_threshold || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader className="pb-3">
@@ -1355,20 +1389,55 @@ function RejectionAnalysisPage() {
 
           {/* Final Inspection Tab */}
           <TabsContent value="final" className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <MetricCard
-                label="Lots Inspected"
-                value={finalMetrics?.total_lots || 0}
-                loading={finalLoading}
-                icon={CheckCircle2}
-              />
-              <MetricCard
-                label="Avg Rejection"
-                value={finalMetrics?.avg_rejection ? `${finalMetrics.avg_rejection}%` : '—'}
-                trend={finalMetrics && finalMetrics.avg_rejection > 3 ? 'up' : 'down'}
-                loading={finalLoading}
-              />
-            </div>
+            {/* Compact Metrics Row */}
+            <Card className="border shadow-sm">
+              <CardContent className="py-1.5 px-4">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Total Lots */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Lots Inspected</p>
+                      <p className="text-lg font-bold">{finalMetrics?.total_lots || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-border"></div>
+
+                  {/* Avg Rejection */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Avg Rejection</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${finalMetrics && finalMetrics.avg_rejection > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {finalMetrics?.avg_rejection ? `${finalMetrics.avg_rejection.toFixed(1)}%` : '—'}
+                        </p>
+                        {finalMetrics && finalMetrics.avg_rejection > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-border"></div>
+
+                  {/* Critical Lots */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Critical</p>
+                      <p className="text-lg font-bold text-red-600">{finalMetrics?.lots_exceeding_threshold || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader className="pb-3">
