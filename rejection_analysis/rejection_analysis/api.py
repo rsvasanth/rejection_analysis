@@ -1645,6 +1645,18 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         parent_inspection_type = inspection.inspection_type or ""
         parent_total_inspected = int(flt(inspection.total_inspected_qty_nos or 0))
         
+        # Fallback: If total_inspected is 0 but we have rejection data, try to calculate
+        if parent_total_inspected == 0:
+            total_rejected = int(flt(inspection.total_rejected_qty or 0))
+            rejection_pct = flt(inspection.total_rejected_qty_in_percentage or 0)
+            if total_rejected > 0 and rejection_pct > 0:
+                # Calculate: inspected = rejected / (rejection% / 100)
+                parent_total_inspected = int(total_rejected / (rejection_pct / 100))
+                frappe.log_error(
+                    f"Calculated total_inspected ({parent_total_inspected}) from rejected ({total_rejected}) and % ({rejection_pct})",
+                    "Inspection Total Fallback"
+                )
+        
         patrol_defects = []
         line_defects = []
         lot_defects = []
@@ -1720,7 +1732,8 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         
         # Build PATROL stage
         if patrol_defects:
-            total_inspected_patrol = sum(d['inspected_qty'] for d in patrol_defects)
+            # Use parent's total instead of summing defects (which duplicates the count)
+            total_inspected_patrol = parent_total_inspected
             total_rejected_patrol = sum(d['rejected_qty'] for d in patrol_defects)
             rej_pct_patrol = (total_rejected_patrol / total_inspected_patrol * 100) if total_inspected_patrol > 0 else 0
             
@@ -1741,7 +1754,8 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         
         # Build LINE stage
         if line_defects:
-            total_inspected_line = sum(d['inspected_qty'] for d in line_defects)
+            # Use parent's total instead of summing defects (which duplicates the count)
+            total_inspected_line = parent_total_inspected
             total_rejected_line = sum(d['rejected_qty'] for d in line_defects)
             rej_pct_line = (total_rejected_line / total_inspected_line * 100) if total_inspected_line > 0 else 0
             
@@ -1762,7 +1776,8 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         
         # Build LOT stage
         if lot_defects:
-            total_inspected_lot = sum(d['inspected_qty'] for d in lot_defects)
+            # Use parent's total instead of summing defects (which duplicates the count)
+            total_inspected_lot = parent_total_inspected
             total_rejected_lot = sum(d['rejected_qty'] for d in lot_defects)
             rej_pct_lot = (total_rejected_lot / total_inspected_lot * 100) if total_inspected_lot > 0 else 0
             
@@ -1799,6 +1814,16 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
             "stages": []
         }
         
+        # Get parent-level total inspected
+        parent_total_inspected = int(flt(inspection.total_inspected_qty_nos or 0))
+        
+        # Fallback: If total_inspected is 0, try to calculate from rejection data
+        if parent_total_inspected == 0:
+            total_rejected = int(flt(inspection.total_rejected_qty or 0))
+            rejection_pct = flt(inspection.total_rejected_qty_in_percentage or 0)
+            if total_rejected > 0 and rejection_pct > 0:
+                parent_total_inspected = int(total_rejected / (rejection_pct / 100))
+        
         # For SPP, we only have FINAL inspection stage
         final_defects = []
         
@@ -1826,24 +1851,18 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
                         rejected_qty = int(flt(getattr(item, field) or 0))
                         break
                 
-                # Try different field names for inspected qty  
-                inspected_qty = 0
-                for field in ['inspected_qty', 'inspected_quantity', 'qty_inspected', 'sample_size']:
-                    if hasattr(item, field):
-                        inspected_qty = int(flt(getattr(item, field) or 0))
-                        break
-                
-                final_defects.append({
-                    "defect_type": defect_type or "Unknown",
-                    "rejected_qty": rejected_qty,
-                    "inspected_qty": inspected_qty
-                })
+                if rejected_qty > 0:
+                    final_defects.append({
+                        "defect_type": defect_type or "Unknown",
+                        "rejected_qty": rejected_qty
+                    })
         else:
             # No child table found, log the document structure
             frappe.log_error(f"No child table found for SPP Entry {spp_inspection_entry_name}. Document fields: {dir(inspection)}", "SPP No Child Table")
         
-        if final_defects and any(d['rejected_qty'] > 0 for d in final_defects):
-            total_inspected = sum(d['inspected_qty'] for d in final_defects)
+        if final_defects:
+            # Use parent's total instead of summing from defects
+            total_inspected = parent_total_inspected
             total_rejected = sum(d['rejected_qty'] for d in final_defects)
             rej_pct = (total_rejected / total_inspected * 100) if total_inspected > 0 else 0
             
@@ -1858,7 +1877,7 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
                         "rejected_qty": d["rejected_qty"],
                         "percentage": round((d["rejected_qty"] / total_inspected * 100) if total_inspected > 0 else 0, 2)
                     }
-                    for d in final_defects if d["rejected_qty"] > 0
+                    for d in final_defects
                 ]
             })
         
