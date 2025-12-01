@@ -127,8 +127,8 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     total_inspected = sum([flt(i.get("total_inspected_qty_nos", 0)) for i in inspections])
     total_rejected = sum([flt(i.get("total_rejected_qty", 0)) for i in inspections])
     
-    # Calculate weighted average rejection percentage
-    avg_rejection = sum([flt(i.get("total_rejected_qty_in_percentage", 0)) for i in inspections]) / total_lots if total_lots > 0 else 0
+    # Calculate weighted average rejection percentage from totals (more accurate)
+    avg_rejection = (total_rejected / total_inspected * 100) if total_inspected > 0 else 0
     
     # STEP 5: Count lots exceeding threshold (hardcoded 5.0%)
     threshold = 5.0

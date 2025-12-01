@@ -312,11 +312,13 @@ function InspectionRecordsTable({
 function IncomingInspectionTable({
   records,
   loading,
-  onGenerateCAR
+  onGenerateCAR,
+  onShowRejectionDetails
 }: {
   records: IncomingInspectionRecord[]
   loading: boolean
   onGenerateCAR: (record: IncomingInspectionRecord) => void
+  onShowRejectionDetails: (inspectionEntry: string, type: string) => void
 }) {
   const getRejectionColor = (percentage: number) => {
     if (percentage > 5) return 'text-red-600 font-bold'
@@ -404,7 +406,11 @@ function IncomingInspectionTable({
                     ? record.rej_qty.toLocaleString()
                     : '—'}
                 </TableCell>
-                <TableCell className={`text-center text-xs ${getRejectionColor(record.rej_pct || 0)}`}>
+                <TableCell
+                  className={`text-center text-xs ${getRejectionColor(record.rej_pct || 0)} cursor-pointer hover:underline`}
+                  onClick={() => onShowRejectionDetails(record.inspection_entry, 'Inspection Entry')}
+                  title="Click to see defect details"
+                >
                   <span className="font-bold">
                     {record.rej_pct !== undefined ? `${record.rej_pct.toFixed(1)}%` : '—'}
                   </span>
@@ -616,6 +622,101 @@ function RejectionAnalysisPage() {
     } finally {
       // setPendingCARsLoading(false)
     }
+  }
+
+  // CSV Export Functions
+  const exportToCSV = (data: any[], filename: string, headers: { key: string; label: string }[]) => {
+    if (!data || data.length === 0) {
+      toast.error('No data to export')
+      return
+    }
+
+    // Create CSV header row
+    const csvHeaders = headers.map(h => h.label).join(',')
+
+    // Create CSV data rows
+    const csvRows = data.map(row => {
+      return headers.map(h => {
+        const value = row[h.key]
+        // Handle special characters and commas in values
+        if (value === null || value === undefined) return ''
+        const stringValue = String(value)
+        // Escape quotes and wrap in quotes if contains comma
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`
+        }
+        return stringValue
+      }).join(',')
+    })
+
+    // Combine headers and rows
+    const csv = [csvHeaders, ...csvRows].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${filename}_${selectedDate}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+
+    toast.success(`Exported ${data.length} records to CSV`)
+  }
+
+  const handleExportLot = () => {
+    const headers = [
+      { key: 'production_date', label: 'Date' },
+      { key: 'shift_type', label: 'Shift' },
+      { key: 'operator_name', label: 'Operator' },
+      { key: 'press_number', label: 'Press' },
+      { key: 'item', label: 'Item' },
+      { key: 'mould_ref', label: 'Mould' },
+      { key: 'lot_no', label: 'Lot No' },
+      { key: 'insp_qty', label: 'Insp Qty' },
+      { key: 'rej_qty', label: 'Rej Qty' },
+      { key: 'patrol_rej_pct', label: 'Patrol %' },
+      { key: 'line_rej_pct', label: 'Line %' },
+      { key: 'lot_rej_pct', label: 'Lot %' },
+    ]
+    exportToCSV(lotRecords, 'lot_inspection', headers)
+  }
+
+  const handleExportIncoming = () => {
+    const headers = [
+      { key: 'date', label: 'Date' },
+      { key: 'batch_no', label: 'Batch' },
+      { key: 'item', label: 'Item' },
+      { key: 'mould_ref', label: 'Mould' },
+      { key: 'lot_no', label: 'Lot No' },
+      { key: 'deflasher_name', label: 'Deflasher' },
+      { key: 'qty_sent', label: 'Sent' },
+      { key: 'qty_received', label: 'Received' },
+      { key: 'diff_pct', label: 'Diff %' },
+      { key: 'inspector_name', label: 'Inspector' },
+      { key: 'insp_qty', label: 'Insp Qty' },
+      { key: 'rej_qty', label: 'Rej Qty' },
+      { key: 'rej_pct', label: 'Rej %' },
+    ]
+    exportToCSV(incomingRecords, 'incoming_inspection', headers)
+  }
+
+  const handleExportFinal = () => {
+    const headers = [
+      { key: 'production_date', label: 'Date' },
+      { key: 'shift_type', label: 'Shift' },
+      { key: 'operator_name', label: 'Operator' },
+      { key: 'press_number', label: 'Press' },
+      { key: 'item', label: 'Item' },
+      { key: 'mould_ref', label: 'Mould' },
+      { key: 'lot_no', label: 'Lot No' },
+      { key: 'final_insp_qty', label: 'Qty' },
+      { key: 'final_rej_qty', label: 'Rej Qty' },
+      { key: 'patrol_rej_pct', label: 'Patrol %' },
+      { key: 'line_rej_pct', label: 'Line %' },
+      { key: 'lot_rej_pct', label: 'Lot %' },
+      { key: 'final_insp_rej_pct', label: 'Final %' },
+    ]
+    exportToCSV(finalRecords, 'final_inspection', headers)
   }
 
   // Auto-fetch pending CARs when date changes
@@ -1184,7 +1285,7 @@ function RejectionAnalysisPage() {
                     </CardDescription>
                   </div>
                   {lotRecords.length > 0 && (
-                    <Button variant="outline" size="sm" className="gap-2 h-8 text-xs">
+                    <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportLot}>
                       <Download className="h-3 w-3" />
                       Export
                     </Button>
@@ -1226,16 +1327,27 @@ function RejectionAnalysisPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Incoming Inspection Records</CardTitle>
-                <CardDescription className="text-xs">
-                  Material quality check records
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Incoming Inspection Records</CardTitle>
+                    <CardDescription className="text-xs">
+                      Material quality check records
+                    </CardDescription>
+                  </div>
+                  {incomingRecords.length > 0 && (
+                    <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportIncoming}>
+                      <Download className="h-3 w-3" />
+                      Export
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
                 <IncomingInspectionTable
                   records={incomingRecords}
                   loading={incomingLoading}
                   onGenerateCAR={handleGenerateCAR}
+                  onShowRejectionDetails={handleShowRejectionDetails}
                 />
               </CardContent>
             </Card>
@@ -1260,10 +1372,20 @@ function RejectionAnalysisPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Final Visual Inspection Records</CardTitle>
-                <CardDescription className="text-xs">
-                  Final quality verification records
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Final Visual Inspection Records</CardTitle>
+                    <CardDescription className="text-xs">
+                      Final quality verification records
+                    </CardDescription>
+                  </div>
+                  {finalRecords.length > 0 && (
+                    <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportFinal}>
+                      <Download className="h-3 w-3" />
+                      Export
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="pt-0">
                 <FinalInspectionGroupedTable
