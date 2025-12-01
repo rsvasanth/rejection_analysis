@@ -1181,32 +1181,106 @@ function RejectionAnalysisPage() {
 
           {/* Lot Inspection Tab */}
           <TabsContent value="lot-inspection" className="space-y-3">
+            {/* Centered Metrics Bar */}
+            <Card className="border shadow-sm">
+              <CardContent className="py-2 px-4">
+                <div className="flex items-center justify-center gap-6">
+                  {/* Total & Pending */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center">
+                      <Package className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Total Lots</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <p className="text-lg font-bold">{lotMetrics?.total_lots || 0}</p>
+                        <span className="text-[10px] text-muted-foreground">Pending:</span>
+                        <span className="text-xs font-semibold text-orange-600">{lotMetrics?.pending_lots || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Patrol Avg */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Patrol Avg</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${lotMetrics && (lotMetrics.patrol_rej_avg || 0) > 3 ? 'text-red-600' : 'text-green-600'}`}>
+                          {lotMetrics?.patrol_rej_avg ? `${lotMetrics.patrol_rej_avg.toFixed(1)}%` : '—'}
+                        </p>
+                        {lotMetrics && (lotMetrics.patrol_rej_avg || 0) > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Line Avg */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Line Avg</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${lotMetrics && (lotMetrics.line_rej_avg || 0) > 3 ? 'text-red-600' : 'text-green-600'}`}>
+                          {lotMetrics?.line_rej_avg ? `${lotMetrics.line_rej_avg.toFixed(1)}%` : '—'}
+                        </p>
+                        {lotMetrics && (lotMetrics.line_rej_avg || 0) > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Lot Rejection */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Lot Rejection</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${lotMetrics && lotMetrics.avg_rejection > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {lotMetrics?.avg_rejection ? `${lotMetrics.avg_rejection.toFixed(1)}%` : '—'}
+                        </p>
+                        {lotMetrics && lotMetrics.avg_rejection > 5 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Critical Lots */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Critical Lots</p>
+                      <p className="text-lg font-bold text-red-600">{lotMetrics?.lots_exceeding_threshold || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <CardTitle className="text-base">Lot Inspection Records</CardTitle>
-                      <CardDescription className="text-xs">
-                        Detailed inspection records for {formatDate(selectedDate)}
-                      </CardDescription>
-                    </div>
-                    {/* Inline Metrics Badges */}
-                    <div className="flex items-center gap-2 ml-4">
-                      <Badge variant="secondary" className="gap-1 text-xs">
-                        <Package className="h-3 w-3" />
-                        {lotMetrics?.total_lots || 0} lots
-                      </Badge>
-                      <Badge variant={lotMetrics && lotMetrics.avg_rejection > 5 ? "destructive" : "outline"} className="gap-1 text-xs">
-                        {lotMetrics?.avg_rejection ? `${lotMetrics.avg_rejection.toFixed(1)}%` : '—'} avg
-                      </Badge>
-                      {(lotMetrics?.lots_exceeding_threshold || 0) > 0 && (
-                        <Badge variant="destructive" className="gap-1 text-xs">
-                          <AlertCircle className="h-3 w-3" />
-                          {lotMetrics?.lots_exceeding_threshold} critical
-                        </Badge>
-                      )}
-                    </div>
+                  <div>
+                    <CardTitle className="text-base">Lot Inspection Records</CardTitle>
+                    <CardDescription className="text-xs">
+                      Detailed inspection records for {formatDate(selectedDate)}
+                    </CardDescription>
                   </div>
                   {lotRecords.length > 0 && (
                     <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportLot}>
@@ -1229,32 +1303,68 @@ function RejectionAnalysisPage() {
 
           {/* Incoming Inspection Tab */}
           <TabsContent value="incoming" className="space-y-3">
+            {/* Centered Metrics Bar */}
+            <Card className="border shadow-sm">
+              <CardContent className="py-2 px-4">
+                <div className="flex items-center justify-center gap-8">
+                  {/* Total & Pending */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-purple-100 flex items-center justify-center">
+                      <ClipboardCheck className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Lots Received</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <p className="text-lg font-bold">{incomingMetrics?.total_lots || 0}</p>
+                        <span className="text-[10px] text-muted-foreground">Pending:</span>
+                        <span className="text-xs font-semibold text-orange-600">{incomingMetrics?.pending_lots || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Avg Rejection */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Avg Rejection</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${incomingMetrics && incomingMetrics.avg_rejection > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {incomingMetrics?.avg_rejection ? `${incomingMetrics.avg_rejection.toFixed(1)}%` : '—'}
+                        </p>
+                        {incomingMetrics && incomingMetrics.avg_rejection > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Critical */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Critical</p>
+                      <p className="text-lg font-bold text-red-600">{incomingMetrics?.lots_exceeding_threshold || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <CardTitle className="text-base">Incoming Inspection Records</CardTitle>
-                      <CardDescription className="text-xs">
-                        Material quality check records
-                      </CardDescription>
-                    </div>
-                    {/* Inline Metrics Badges */}
-                    <div className="flex items-center gap-2 ml-4">
-                      <Badge variant="secondary" className="gap-1 text-xs">
-                        <ClipboardCheck className="h-3 w-3" />
-                        {incomingMetrics?.total_lots || 0} lots
-                      </Badge>
-                      <Badge variant={incomingMetrics && incomingMetrics.avg_rejection > 5 ? "destructive" : "outline"} className="gap-1 text-xs">
-                        {incomingMetrics?.avg_rejection ? `${incomingMetrics.avg_rejection.toFixed(1)}%` : '—'} avg
-                      </Badge>
-                      {(incomingMetrics?.lots_exceeding_threshold || 0) > 0 && (
-                        <Badge variant="destructive" className="gap-1 text-xs">
-                          <AlertCircle className="h-3 w-3" />
-                          {incomingMetrics?.lots_exceeding_threshold} critical
-                        </Badge>
-                      )}
-                    </div>
+                  <div>
+                    <CardTitle className="text-base">Incoming Inspection Records</CardTitle>
+                    <CardDescription className="text-xs">
+                      Material quality check records
+                    </CardDescription>
                   </div>
                   {incomingRecords.length > 0 && (
                     <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportIncoming}>
@@ -1277,32 +1387,64 @@ function RejectionAnalysisPage() {
 
           {/* Final Inspection Tab */}
           <TabsContent value="final" className="space-y-3">
+            {/* Centered Metrics Bar */}
+            <Card className="border shadow-sm">
+              <CardContent className="py-2 px-4">
+                <div className="flex items-center justify-center gap-8">
+                  {/* Total Lots */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Lots Inspected</p>
+                      <p className="text-lg font-bold">{finalMetrics?.total_lots || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Avg Rejection */}
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Avg Rejection</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`text-lg font-bold ${finalMetrics && finalMetrics.avg_rejection > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                          {finalMetrics?.avg_rejection ? `${finalMetrics.avg_rejection.toFixed(1)}%` : '—'}
+                        </p>
+                        {finalMetrics && finalMetrics.avg_rejection > 3 ? (
+                          <TrendingUp className="h-3 w-3 text-red-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-10 w-px bg-border"></div>
+
+                  {/* Critical */}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-md bg-red-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Critical</p>
+                      <p className="text-lg font-bold text-red-600">{finalMetrics?.lots_exceeding_threshold || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <CardTitle className="text-base">Final Visual Inspection Records</CardTitle>
-                      <CardDescription className="text-xs">
-                        Final quality verification records
-                      </CardDescription>
-                    </div>
-                    {/* Inline Metrics Badges */}
-                    <div className="flex items-center gap-2 ml-4">
-                      <Badge variant="secondary" className="gap-1 text-xs">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {finalMetrics?.total_lots || 0} lots
-                      </Badge>
-                      <Badge variant={finalMetrics && finalMetrics.avg_rejection > 5 ? "destructive" : "outline"} className="gap-1 text-xs">
-                        {finalMetrics?.avg_rejection ? `${finalMetrics.avg_rejection.toFixed(1)}%` : '—'} avg
-                      </Badge>
-                      {(finalMetrics?.lots_exceeding_threshold || 0) > 0 && (
-                        <Badge variant="destructive" className="gap-1 text-xs">
-                          <AlertCircle className="h-3 w-3" />
-                          {finalMetrics?.lots_exceeding_threshold} critical
-                        </Badge>
-                      )}
-                    </div>
+                  <div>
+                    <CardTitle className="text-base">Final Visual Inspection Records</CardTitle>
+                    <CardDescription className="text-xs">
+                      Final quality verification records
+                    </CardDescription>
                   </div>
                   {finalRecords.length > 0 && (
                     <Button variant="outline" size="sm" className="gap-2 h-8 text-xs" onClick={handleExportFinal}>
