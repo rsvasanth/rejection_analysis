@@ -50,6 +50,7 @@ interface GroupedLot {
     mould_ref: string
     shift_type: string | null
     trimming_operator: string
+    final_inspector: string
     most_critical_sublot: FinalInspectionRecord  // The sublot with highest rejection %
 }
 
@@ -113,7 +114,8 @@ export function FinalInspectionGroupedTable({
                 mould_ref: first.mould_ref,
                 shift_type: first.shift_type,
                 trimming_operator: first.trimming_operator || '—',
-                most_critical_sublot: mostCriticalSublot  // Add this for parent row CAR generation
+                final_inspector: first.final_inspector || '—',
+                most_critical_sublot: mostCriticalSublot
             })
         })
 
@@ -180,6 +182,7 @@ export function FinalInspectionGroupedTable({
                             <TableHead className="w-[90px]">Mould</TableHead>
                             <TableHead className="w-[90px]">Lot No</TableHead>
                             <TableHead className="w-[110px]">Trimming</TableHead>
+                            <TableHead className="w-[110px]">Inspector</TableHead>
                             <TableHead className="w-[70px] text-center">Qty</TableHead>
                             <TableHead className="w-[70px] text-center">Rej Qty</TableHead>
                             <TableHead className="w-[70px] text-center">Patrol</TableHead>
@@ -235,6 +238,9 @@ export function FinalInspectionGroupedTable({
                                         </TableCell>
                                         <TableCell className="text-xs truncate max-w-[110px]" title={group.trimming_operator}>
                                             {group.trimming_operator || '—'}
+                                        </TableCell>
+                                        <TableCell className="text-xs truncate max-w-[110px]" title={group.final_inspector}>
+                                            {group.final_inspector || '—'}
                                         </TableCell>
                                         <TableCell className="text-center font-bold text-xs">
                                             {group.total_insp_qty.toLocaleString()}
@@ -312,6 +318,9 @@ export function FinalInspectionGroupedTable({
                                             <TableCell className="font-mono text-xs pl-4">└ {record.lot_no}</TableCell>
                                             <TableCell className="text-xs truncate max-w-[110px]" title={record.trimming_operator}>
                                                 {record.trimming_operator || '—'}
+                                            </TableCell>
+                                            <TableCell className="text-xs truncate max-w-[110px]" title={record.final_inspector}>
+                                                {record.final_inspector || '—'}
                                             </TableCell>
                                             <TableCell className="text-center text-xs">{record.final_insp_qty.toLocaleString()}</TableCell>
                                             <TableCell className="text-center text-xs">{record.final_rej_qty.toLocaleString()}</TableCell>
