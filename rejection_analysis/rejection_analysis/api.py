@@ -883,14 +883,22 @@ def get_final_inspection_report(filters=None):
         # Fetch Trimming Operator safely
         trimming_operator = "—"
         try:
+            # Generate potential batch numbers to check (handle 'P' prefix)
+            potential_batch_nos = list(set([
+                lot_no, 
+                base_lot_no,
+                f"P{lot_no}",
+                f"P{base_lot_no}"
+            ]))
+            
             # 1. Try fetching from SPP Lot Resource Tagging (Smart Screens app)
             trimming_data = frappe.db.sql("""
                 SELECT GROUP_CONCAT(DISTINCT operator_name SEPARATOR ', ') as operator_name
                 FROM `tabSPP Lot Resource Tagging`
-                WHERE (batch_no = %s OR batch_no = %s)
+                WHERE batch_no IN %s
                 AND operation_type IN ('ID Trimming', 'OD Trimming', 'Trimming')
                 AND docstatus = 1
-            """, (lot_no, base_lot_no), as_dict=True)
+            """, (potential_batch_nos,), as_dict=True)
             
             if trimming_data and trimming_data[0].operator_name:
                 trimming_operator = trimming_data[0].operator_name
@@ -900,10 +908,10 @@ def get_final_inspection_report(filters=None):
                 trimming_data_old = frappe.db.sql("""
                     SELECT GROUP_CONCAT(DISTINCT operator_name SEPARATOR ', ') as operator_name
                     FROM `tabLot Resource Tagging`
-                    WHERE (scan_lot_no = %s OR scan_lot_no = %s)
+                    WHERE scan_lot_no IN %s
                     AND operation_type IN ('ID Trimming', 'OD Trimming', 'Trimming')
                     AND docstatus = 1
-                """, (lot_no, base_lot_no), as_dict=True)
+                """, (potential_batch_nos,), as_dict=True)
                 
                 if trimming_data_old and trimming_data_old[0].operator_name:
                     trimming_operator = trimming_data_old[0].operator_name
