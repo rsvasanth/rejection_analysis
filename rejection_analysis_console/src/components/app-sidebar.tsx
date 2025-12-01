@@ -1,7 +1,7 @@
 import * as React from "react"
 import {
   IconChartBar,
-
+  IconLayoutDashboard,
   IconDatabase,
   IconFileAnalytics,
   IconHelp,
@@ -25,7 +25,11 @@ import {
 
 const data = {
   navMain: [
-
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: IconLayoutDashboard,
+    },
     {
       title: "Rejection Analysis",
       url: "/rejection-analysis",
@@ -73,8 +77,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="/rejection-analysis">
-                <IconChartBar className="!size-5" />
+              <a href="/dashboard">
+                <IconLayoutDashboard className="!size-5" />
                 <span className="text-base font-semibold">Rejection Analysis</span>
               </a>
             </SidebarMenuButton>

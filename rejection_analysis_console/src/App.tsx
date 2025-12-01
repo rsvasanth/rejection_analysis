@@ -15,8 +15,8 @@ const router = createBrowserRouter(
 
       {/* Protected Routes - Wrapped with ProtectedRoute */}
       <Route path="/" element={<ProtectedRoute />}>
-        <Route index element={<Navigate to="/rejection-analysis" replace />} />
-        <Route path="/dashboard" element={<Navigate to="/rejection-analysis" replace />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" lazy={() => import('@/pages/Dashboard')} />
         <Route path="/rejection-analysis" lazy={() => import('@/pages/RejectionAnalysis')} />
         <Route path="/reports" lazy={() => import('@/pages/Reports')} />
         <Route path="/settings" lazy={() => import('@/pages/Settings')} />

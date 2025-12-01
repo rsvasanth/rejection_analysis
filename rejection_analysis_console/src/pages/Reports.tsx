@@ -22,6 +22,7 @@ import {
   Search,
 } from 'lucide-react'
 import { useFrappeGetCall } from 'frappe-react-sdk'
+import { ReportViewerModal } from '@/components/ReportViewerModal'
 
 interface DailyReport {
   name: string
@@ -36,6 +37,8 @@ interface DailyReport {
 export function Component() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('All')
+  const [selectedReport, setSelectedReport] = useState<string | null>(null)
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   // Fetch all reports using custom API
   const { data: apiResponse, isLoading, error, mutate } = useFrappeGetCall<any>(
@@ -73,9 +76,9 @@ export function Component() {
     })
   }
 
-  const openReportInFrappe = (reportName: string) => {
-    const siteUrl = window.location.origin
-    window.open(`${siteUrl}/app/daily-rejection-report/${reportName}`, '_blank')
+  const viewReport = (reportName: string) => {
+    setSelectedReport(reportName)
+    setViewerOpen(true)
   }
 
   return (
@@ -224,7 +227,7 @@ export function Component() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openReportInFrappe(report.name)}
+                            onClick={() => viewReport(report.name)}
                             className="gap-2"
                           >
                             <Eye className="h-3 w-3" />
@@ -240,6 +243,16 @@ export function Component() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Viewer Modal */}
+      <ReportViewerModal
+        isOpen={viewerOpen}
+        onClose={() => {
+          setViewerOpen(false)
+          setSelectedReport(null)
+        }}
+        reportName={selectedReport}
+      />
     </DashboardLayout>
   )
 }

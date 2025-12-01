@@ -73,6 +73,8 @@ export function RejectionDetailsModal({
 
     const getStageColor = (stageName: string) => {
         switch (stageName) {
+            case 'INCOMING INSPECTION':
+                return 'bg-teal-600'
             case 'PATROL':
                 return 'bg-blue-600'
             case 'LINE':
@@ -86,8 +88,16 @@ export function RejectionDetailsModal({
         }
     }
 
+    const handleClose = () => {
+        // Allow the Dialog slide-out animation to complete before unmounting
+        // Dialog component has a 200-300ms animation duration
+        setTimeout(() => {
+            onClose()
+        }, 250)
+    }
+
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">

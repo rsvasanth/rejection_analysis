@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -185,10 +185,9 @@ export function FinalInspectionGroupedTable({
                             const hasMultipleSublots = group.sublots.length > 1
 
                             return (
-                                <>
+                                <React.Fragment key={group.base_lot_no}>
                                     {/* Parent row - Aggregated data */}
                                     <TableRow
-                                        key={group.base_lot_no}
                                         className={`${group.exceeds_threshold ? 'bg-red-50' : 'bg-blue-50/30'} border-b-2 font-medium`}
                                     >
                                         <TableCell className="text-center">
@@ -327,7 +326,7 @@ export function FinalInspectionGroupedTable({
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                </>
+                                </React.Fragment>
                             )
                         })}
                     </TableBody>
