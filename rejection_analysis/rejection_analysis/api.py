@@ -248,6 +248,162 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     return metrics
 
 
+@frappe.whitelist()
+def get_aggregate_dashboard_metrics(period="30d", end_date=None):
+    """Get aggregate dashboard metrics for a time period."""
+    from datetime import datetime, timedelta
+    from frappe.utils import today, flt
+    
+    if not end_date:
+        end_date = today()
+    
+    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+    
+    if period == "7d":
+        start_dt = end_dt - timedelta(days=7)
+        period_label = "Last 7 Days"
+    elif period == "30d":
+        start_dt = end_dt - timedelta(days=30)
+        period_label = "Last 30 Days"
+    elif period == "90d":
+        start_dt = end_dt - timedelta(days=90)
+        period_label = "Last 90 Days"
+    elif period == "6m":
+        start_dt = end_dt - timedelta(days=180)
+        period_label = "Last 6 Months"
+    else:
+        start_dt = end_dt - timedelta(days=30)
+        period_label = "Last 30 Days"
+    
+    start_date = start_dt.strftime('%Y-%m-%d')
+    
+    # Production volume
+    prod_query = """
+        SELECT COUNT(DISTINCT scan_lot_number) as total
+        FROM `tabMoulding Production Entry`
+        WHERE DATE_FORMAT(moulding_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+    """
+    prod = frappe.db.sql(prod_query, (start_date, end_date), as_dict=True)
+    total_production = int(flt(prod[0].total)) if prod else 0
+    
+    # Aggregate inspections
+    insp_query = """
+        SELECT SUM(i_qty) as i_qty, SUM(r_qty) as r_qty, COUNT(*) as cnt,
+               SUM(CASE WHEN r_pct > 5.0 THEN 1 ELSE 0 END) as crit
+        FROM (
+            SELECT ie.total_inspected_qty_nos as i_qty, ie.total_rejected_qty as r_qty,
+                   ie.total_rejected_qty_in_percentage as r_pct
+            FROM `tabInspection Entry` ie
+            LEFT JOIN `tabMoulding Production Entry` mpe ON mpe.scan_lot_number = ie.lot_no
+            WHERE ie.inspection_type = 'Lot Inspection' AND ie.docstatus = 1
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+            UNION ALL
+            SELECT ie.total_inspected_qty_nos, ie.total_rejected_qty,
+                   ie.total_rejected_qty_in_percentage
+            FROM `tabInspection Entry` ie
+            WHERE ie.inspection_type = 'Incoming Inspection' AND ie.docstatus = 1
+            AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+            UNION ALL
+            SELECT spp.total_inspected_qty_nos, spp.total_rejected_qty,
+                   CASE WHEN spp.total_rejected_qty_in_percentage > 0 
+                        THEN spp.total_rejected_qty_in_percentage
+                        WHEN spp.total_inspected_qty_nos > 0 
+                        THEN (spp.total_rejected_qty / spp.total_inspected_qty_nos) * 100
+                        ELSE 0 END
+            FROM `tabSPP Inspection Entry` spp
+            WHERE spp.inspection_type = 'Final Visual Inspection' AND spp.docstatus = 1
+            AND DATE_FORMAT(spp.posting_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+        ) x
+    """
+    insp = frappe.db.sql(insp_query, (start_date, end_date, start_date, end_date, start_date, end_date), as_dict=True)
+    
+    i_qty = int(flt(insp[0].i_qty)) if insp and insp[0].i_qty else 0
+    r_qty = int(flt(insp[0].r_qty)) if insp and insp[0].r_qty else 0
+    cnt = int(flt(insp[0].cnt)) if insp else 0
+    crit = int(flt(insp[0].crit)) if insp else 0
+    
+    avg_rej = round((r_qty / i_qty * 100), 2) if i_qty > 0 else 0.0
+    
+    # Open CARs
+    car_query = """
+        SELECT COUNT(*) as open_cars
+        FROM `tabCorrective Action Report`
+        WHERE status IN ('Pending', 'In Progress', 'Open') AND docstatus != 2
+    """
+    car = frappe.db.sql(car_query, as_dict=True)
+    open_cars = int(flt(car[0].open_cars)) if car else 0
+    
+    return {
+        "total_production": total_production,
+        "total_inspected": cnt,
+        "avg_rejection_pct": avg_rej,
+        "critical_lots_count": crit,
+        "total_rejected_qty": r_qty,
+        "total_inspected_qty": i_qty,
+        "open_cars": open_cars,
+        "period_label": period_label,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+
+
+@frappe.whitelist()
+def get_performance_rankings(period="30d", dimension="machine", limit=10, end_date=None):
+    """Get performance rankings by machine, operator, item, or mould."""
+    from datetime import datetime, timedelta
+    from frappe.utils import today, flt
+    
+    if not end_date:
+        end_date = today()
+    
+    end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+    start_dt = end_dt - timedelta(days=30 if period == "30d" else 7 if period == "7d" else 90 if period == "90d" else 180)
+    start_date = start_dt.strftime('%Y-%m-%d')
+    
+    # Map dimension to fields
+    field_map = {
+        "machine": "jc.workstation",
+        "operator": "mpe.employee_name",
+        "item": "mpe.item_to_produce",
+        "mould": "mpe.mould_reference"
+    }
+    field = field_map.get(dimension, "jc.workstation")
+    
+    query = f"""
+        SELECT {field} as name,
+            SUM(i_qty) as total_inspected, SUM(r_qty) as total_rejected,
+            CASE WHEN SUM(i_qty) > 0 THEN (SUM(r_qty) / SUM(i_qty)) * 100 ELSE 0 END as rejection_pct
+        FROM (
+            SELECT {field}, ie.total_inspected_qty_nos as i_qty, ie.total_rejected_qty as r_qty
+            FROM `tabInspection Entry` ie
+            LEFT JOIN `tabMoulding Production Entry` mpe ON mpe.scan_lot_number = ie.lot_no
+            LEFT JOIN `tabJob Card` jc ON jc.name = mpe.job_card
+            WHERE ie.inspection_type = 'Lot Inspection' AND ie.docstatus = 1
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+            UNION ALL
+            SELECT {field}, ie.total_inspected_qty_nos, ie.total_rejected_qty
+            FROM `tabInspection Entry` ie
+            LEFT JOIN `tabMoulding Production Entry` mpe ON mpe.scan_lot_number = ie.lot_no
+            LEFT JOIN `tabJob Card` jc ON jc.name = mpe.job_card
+            WHERE ie.inspection_type = 'Incoming Inspection' AND ie.docstatus = 1
+            AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') BETWEEN %s AND %s
+        ) x
+        WHERE {field} IS NOT NULL
+        GROUP BY {field}
+        ORDER BY rejection_pct DESC
+        LIMIT %s
+    """
+    
+    results = frappe.db.sql(query, (start_date, end_date, start_date, end_date, limit), as_dict=True)
+    
+    return [{
+        "name": r.name or "Unknown",
+        "total_inspected": int(flt(r.total_inspected)),
+        "total_rejected": int(flt(r.total_rejected)),
+        "rejection_pct": round(flt(r.rejection_pct), 2)
+    } for r in results]
+
+
 # ============================================================================
 # LOT INSPECTION REPORT API
 # ============================================================================

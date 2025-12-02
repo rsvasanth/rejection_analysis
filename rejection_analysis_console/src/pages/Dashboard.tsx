@@ -6,6 +6,7 @@ import { FrappeContext } from 'frappe-react-sdk'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import {
@@ -54,6 +55,7 @@ interface StageRejectionData {
 function DashboardPage() {
   const { call } = useContext(FrappeContext) as any
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d' | '6m'>('30d')
   const [loading, setLoading] = useState(false)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [trendData, setTrendData] = useState<RejectionTrendData[]>([])
@@ -62,7 +64,7 @@ function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData()
-  }, [selectedDate])
+  }, [timePeriod])
 
   const fetchDashboardData = async () => {
     setLoading(true)
@@ -95,25 +97,23 @@ function DashboardPage() {
 
   const fetchMetrics = async () => {
     try {
-      // Fetch real metrics from API for selected date
-      const dateStr = format(selectedDate, 'yyyy-MM-dd')
-      const result = await call.post('rejection_analysis.api.get_dashboard_metrics', {
-        date: dateStr,
-        inspection_type: 'Lot Inspection'
+      // Fetch aggregate metrics for selected time period
+      const result = await call.post('rejection_analysis.api.get_aggregate_dashboard_metrics', {
+        period: timePeriod
       })
 
       const data = result?.message || result
 
       return {
-        total_lots_inspected: data?.total_lots || 0,
+        total_lots_inspected: data?.total_production || 0,
         total_rejected_qty: data?.total_rejected_qty || 0,
-        average_rejection_rate: data?.avg_rejection || 0,
-        lots_exceeding_threshold: data?.lots_exceeding_threshold || 0,
-        total_cars_generated: 0, // Will add API later
-        pending_cars: 0, // Will add API later
-        critical_alerts: data?.lots_exceeding_threshold || 0,
-        trend_direction: (data?.avg_rejection || 0) < 5.0 ? 'down' as const : 'up' as const,
-        trend_percentage: Math.abs(5.0 - (data?.avg_rejection || 0))
+        average_rejection_rate: data?.avg_rejection_pct || 0,
+        lots_exceeding_threshold: data?.critical_lots_count || 0,
+        total_cars_generated: 0,
+        pending_cars: data?.open_cars || 0,
+        critical_alerts: data?.critical_lots_count || 0,
+        trend_direction: (data?.avg_rejection_pct || 0) < 5.0 ? 'down' as const : 'up' as const,
+        trend_percentage: Math.abs(5.0 - (data?.avg_rejection_pct || 0))
       }
     } catch (error) {
       console.error('Error fetching metrics:', error)
@@ -210,6 +210,19 @@ function DashboardPage() {
             </p>
           </div>
 
+          {/* Time Period Selector */}
+          <Select value={timePeriod} onValueChange={(value: any) => setTimePeriod(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="90d">Last 90 Days</SelectItem>
+              <SelectItem value="6m">Last 6 Months</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -239,7 +252,7 @@ function DashboardPage() {
           {/* Total Lots Inspected */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Lots Inspected</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Lots Inspected (Last 30 Days)</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -259,7 +272,7 @@ function DashboardPage() {
           {/* Average Rejection Rate */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Rejection Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">Avg Rejection Rate (Last 30 Days)</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -289,7 +302,7 @@ function DashboardPage() {
           {/* Critical Lots */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Critical Lots</CardTitle>
+              <CardTitle className="text-sm font-medium">Critical Lots (Last 7 Days)</CardTitle>
               <AlertTriangle className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>

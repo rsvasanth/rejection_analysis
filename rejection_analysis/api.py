@@ -16,6 +16,8 @@ Usage from frontend:
 # Import all API functions from the nested module
 from rejection_analysis.rejection_analysis.api import (
     get_dashboard_metrics,
+    get_aggregate_dashboard_metrics,
+    get_performance_rankings,
     get_lot_inspection_report,
     get_incoming_inspection_report,
     get_final_inspection_report,
@@ -39,6 +41,8 @@ from rejection_analysis.rejection_analysis.api import (
 # Re-export all functions (this makes them accessible via rejection_analysis.api.*)
 __all__ = [
     'get_dashboard_metrics',
+    'get_aggregate_dashboard_metrics',
+    'get_performance_rankings',
     'get_lot_inspection_report',
     'get_incoming_inspection_report',
     'get_final_inspection_report',

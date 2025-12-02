@@ -36,6 +36,11 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Performance",
+      url: "/performance-rankings",
+      icon: IconChartBar,
+    },
+    {
       title: "Reports",
       url: "/reports",
       icon: IconFileAnalytics,
