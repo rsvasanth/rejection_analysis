@@ -9,6 +9,8 @@ Usage from frontend:
     rejection_analysis.api.get_dashboard_metrics(...)
     rejection_analysis.api.get_lot_inspection_report(...)
     rejection_analysis.api.create_car_from_inspection(...)
+
+# Updated: Force reload
 """
 
 # Import all API functions from the nested module

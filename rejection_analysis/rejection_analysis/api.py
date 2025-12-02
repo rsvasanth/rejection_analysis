@@ -72,138 +72,113 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     if not date:
         date = today()
     
-    # STEP 2: Query inspection entries for the specified date and type
-    # NOTE: Final Visual Inspection uses SPP Inspection Entry table
-    # IMPORTANT: Filter by moulding_date (production date) to match the records query
-    if inspection_type == "Final Visual Inspection":
+    # Initialize default result structure
+    metrics = {
+        "total_lots": 0,
+        "pending_lots": 0,
+        "avg_rejection": 0.0,
+        "lots_exceeding_threshold": 0,
+        "total_inspected_qty": 0,
+        "total_rejected_qty": 0,
+        "patrol_rej_avg": 0.0,
+        "line_rej_avg": 0.0,
+        "threshold_percentage": 5.0
+    }
+
+    # ========================================================================
+    # CASE 1: LOT INSPECTION (Filter by Production Date)
+    # ========================================================================
+    if inspection_type == "Lot Inspection":
+        # 1. Get Completed Inspections (Source: Inspection Entry linked to MPE)
         query = """
-            SELECT DISTINCT
-                spp_ie.name, 
-                spp_ie.lot_no, 
-                spp_ie.total_rejected_qty_in_percentage,
-                spp_ie.total_inspected_qty_nos, 
-                spp_ie.total_rejected_qty
-            FROM `tabSPP Inspection Entry` spp_ie
-            INNER JOIN `tabMoulding Production Entry` mpe
-                ON SUBSTRING_INDEX(spp_ie.lot_no, '-', 1) = mpe.scan_lot_number
-            WHERE spp_ie.inspection_type = %s
-            AND spp_ie.docstatus = 1
-            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-        """
-    else:
-        query = """
-            SELECT DISTINCT
-                ie.name, 
-                ie.lot_no, 
+            SELECT 
                 ie.total_rejected_qty_in_percentage,
                 ie.total_inspected_qty_nos, 
                 ie.total_rejected_qty
             FROM `tabInspection Entry` ie
             LEFT JOIN `tabMoulding Production Entry` mpe
                 ON mpe.scan_lot_number = ie.lot_no
-            WHERE ie.inspection_type = %s
+            WHERE ie.inspection_type = 'Lot Inspection'
             AND ie.docstatus = 1
             AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
         """
-    
-    inspections = frappe.db.sql(query, (inspection_type, date), as_dict=True)
-    
-    # STEP 3: Handle empty results
-    if not inspections:
-        return {
-            "total_lots": 0,
-            "pending_lots": 0,
-            "avg_rejection": 0.0,
-            "lots_exceeding_threshold": 0,
-            "total_inspected_qty": 0,
-            "total_rejected_qty": 0,
-            "patrol_rej_avg": 0.0,
-            "line_rej_avg": 0.0,
-            "threshold_percentage": 5.0
-        }
-    
-    # STEP 4: Calculate basic metrics
-    total_lots = len(inspections)
-    total_inspected = sum([flt(i.get("total_inspected_qty_nos", 0)) for i in inspections])
-    total_rejected = sum([flt(i.get("total_rejected_qty", 0)) for i in inspections])
-    
-    # Calculate weighted average rejection percentage from totals (more accurate)
-    avg_rejection = (total_rejected / total_inspected * 100) if total_inspected > 0 else 0
-    
-    # STEP 5: Count lots exceeding threshold (hardcoded 5.0%)
-    threshold = 5.0
-    lots_exceeding = len([i for i in inspections if flt(i.get("total_rejected_qty_in_percentage", 0)) > threshold])
-    
-    # STEP 6: For Lot Inspection, calculate Patrol and Line rejection averages
-    patrol_rej_avg = 0.0
-    line_rej_avg = 0.0
-    pending_lots = 0
-    
-    if inspection_type == "Lot Inspection":
-        # Get Patrol Inspection average for lots produced on the same date
-        patrol_query = """
-            SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rej
-            FROM `tabInspection Entry` ie
-            LEFT JOIN `tabMoulding Production Entry` mpe
-                ON mpe.scan_lot_number = ie.lot_no
-            WHERE ie.inspection_type = 'Patrol Inspection'
-            AND ie.docstatus = 1
-            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-        """
-        patrol_result = frappe.db.sql(patrol_query, (date,), as_dict=True)
-        patrol_rej_avg = flt(patrol_result[0].get("avg_rej", 0.0)) if patrol_result else 0.0
+        inspections = frappe.db.sql(query, (date,), as_dict=True)
         
-        # Get Line Inspection average for lots produced on the same date
-        line_query = """
-            SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rej
-            FROM `tabInspection Entry` ie
-            LEFT JOIN `tabMoulding Production Entry` mpe
-                ON mpe.scan_lot_number = ie.lot_no
-            WHERE ie.inspection_type = 'Line Inspection'
-            AND ie.docstatus = 1
-            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-        """
-        line_result = frappe.db.sql(line_query, (date,), as_dict=True)
-        line_rej_avg = flt(line_result[0].get("avg_rej", 0.0)) if line_result else 0.0
+        # 2. Calculate Basic Metrics
+        metrics["total_lots"] = len(inspections)
+        metrics["total_inspected_qty"] = sum([flt(i.total_inspected_qty_nos) for i in inspections])
+        metrics["total_rejected_qty"] = sum([flt(i.total_rejected_qty) for i in inspections])
         
-        # Calculate pending lots: 
-        # 1. Lots produced but not inspected (Lot Inspection)
-        # 2. Lots with incomplete stages (missing Patrol or Line inspection)
+        if metrics["total_inspected_qty"] > 0:
+            metrics["avg_rejection"] = (metrics["total_rejected_qty"] / metrics["total_inspected_qty"] * 100)
+        
+        metrics["lots_exceeding_threshold"] = len([i for i in inspections if flt(i.total_rejected_qty_in_percentage) > 5.0])
+
+        # 3. Calculate Patrol & Line Averages (Specific to Lot Inspection)
+        for sub_type in ['Patrol Inspection', 'Line Inspection']:
+            sub_query = """
+                SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rej
+                FROM `tabInspection Entry` ie
+                LEFT JOIN `tabMoulding Production Entry` mpe
+                    ON mpe.scan_lot_number = ie.lot_no
+                WHERE ie.inspection_type = %s
+                AND ie.docstatus = 1
+                AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            """
+            sub_result = frappe.db.sql(sub_query, (sub_type, date), as_dict=True)
+            avg_val = flt(sub_result[0].avg_rej) if sub_result and sub_result[0].avg_rej else 0.0
+            
+            if sub_type == 'Patrol Inspection':
+                metrics["patrol_rej_avg"] = avg_val
+            else:
+                metrics["line_rej_avg"] = avg_val
+
+        # 4. Calculate Pending Lots (Produced today but not inspected)
         pending_query = """
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
             WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-            AND (
-                -- Not yet inspected (no Lot Inspection)
-                NOT EXISTS (
-                    SELECT 1 FROM `tabInspection Entry` ie 
-                    WHERE ie.lot_no = mpe.scan_lot_number 
-                    AND ie.inspection_type = 'Lot Inspection'
-                    AND ie.docstatus = 1
-                )
-                OR
-                -- Incomplete stages (missing Patrol Inspection)
-                NOT EXISTS (
-                    SELECT 1 FROM `tabInspection Entry` ie 
-                    WHERE ie.lot_no = mpe.scan_lot_number 
-                    AND ie.inspection_type = 'Patrol Inspection'
-                    AND ie.docstatus = 1
-                )
-                OR
-                -- Incomplete stages (missing Line Inspection)
-                NOT EXISTS (
-                    SELECT 1 FROM `tabInspection Entry` ie 
-                    WHERE ie.lot_no = mpe.scan_lot_number 
-                    AND ie.inspection_type = 'Line Inspection'
-                    AND ie.docstatus = 1
-                )
+            AND NOT EXISTS (
+                SELECT 1 FROM `tabInspection Entry` ie 
+                WHERE ie.lot_no = mpe.scan_lot_number 
+                AND ie.inspection_type = 'Lot Inspection'
+                AND ie.docstatus = 1
             )
         """
         pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
-        pending_lots = int(flt(pending_result[0].get("pending_count", 0))) if pending_result else 0
-        
+        metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
+
+    # ========================================================================
+    # CASE 2: INCOMING INSPECTION (Filter by Inspection Posting Date)
+    # ========================================================================
     elif inspection_type == "Incoming Inspection":
-        # Calculate pending: Lots produced but not inspected (Incoming Inspection)
+        # 1. Get Completed Inspections (Source: Inspection Entry directly)
+        query = """
+            SELECT 
+                ie.total_rejected_qty_in_percentage,
+                ie.total_inspected_qty_nos, 
+                ie.total_rejected_qty
+            FROM `tabInspection Entry` ie
+            WHERE ie.inspection_type = 'Incoming Inspection'
+            AND ie.docstatus = 1
+            AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') = %s
+        """
+        inspections = frappe.db.sql(query, (date,), as_dict=True)
+        
+        # 2. Calculate Basic Metrics
+        metrics["total_lots"] = len(inspections)
+        metrics["total_inspected_qty"] = sum([flt(i.total_inspected_qty_nos) for i in inspections])
+        metrics["total_rejected_qty"] = sum([flt(i.total_rejected_qty) for i in inspections])
+        
+        if metrics["total_inspected_qty"] > 0:
+            metrics["avg_rejection"] = (metrics["total_rejected_qty"] / metrics["total_inspected_qty"] * 100)
+            
+        metrics["lots_exceeding_threshold"] = len([i for i in inspections if flt(i.total_rejected_qty_in_percentage) > 5.0])
+        
+        # 3. Calculate Pending Lots (Sent to deflasher but not yet inspected)
+        # Note: This is harder to calculate by "Inspection Date" since pending ones don't have an inspection date yet.
+        # We will assume "Pending" means lots received from deflasher TODAY but not inspected.
+        # Or simpler: Lots produced today that need incoming inspection (reverting to production date for pending context)
         pending_query = """
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
@@ -216,10 +191,41 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
             )
         """
         pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
-        pending_lots = int(flt(pending_result[0].get("pending_count", 0))) if pending_result else 0
-        
+        metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
+
+    # ========================================================================
+    # CASE 3: FINAL VISUAL INSPECTION (Filter by Inspection Posting Date)
+    # ========================================================================
     elif inspection_type == "Final Visual Inspection":
-        # Calculate pending: Lots produced but not inspected (Final Visual Inspection)
+        # 1. Get Completed Inspections (Source: SPP Inspection Entry)
+        query = """
+            SELECT 
+                spp_ie.total_rejected_qty_in_percentage,
+                spp_ie.total_inspected_qty_nos, 
+                spp_ie.total_rejected_qty
+            FROM `tabSPP Inspection Entry` spp_ie
+            WHERE spp_ie.inspection_type = 'Final Visual Inspection'
+            AND spp_ie.docstatus = 1
+            AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') = %s
+        """
+        inspections = frappe.db.sql(query, (date,), as_dict=True)
+        
+        # 2. Calculate Basic Metrics
+        metrics["total_lots"] = len(inspections)
+        metrics["total_inspected_qty"] = sum([flt(i.total_inspected_qty_nos) for i in inspections])
+        metrics["total_rejected_qty"] = sum([flt(i.total_rejected_qty) for i in inspections])
+        
+        if metrics["total_inspected_qty"] > 0:
+            metrics["avg_rejection"] = (metrics["total_rejected_qty"] / metrics["total_inspected_qty"] * 100)
+            
+        # Recalculate threshold count based on calculated percentage if needed
+        metrics["lots_exceeding_threshold"] = len([
+            i for i in inspections 
+            if (flt(i.total_rejected_qty) / flt(i.total_inspected_qty_nos) * 100) > 5.0 
+            if flt(i.total_inspected_qty_nos) > 0
+        ])
+        
+        # 3. Calculate Pending Lots (Produced today but not final inspected)
         pending_query = """
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
@@ -232,20 +238,14 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
             )
         """
         pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
-        pending_lots = int(flt(pending_result[0].get("pending_count", 0))) if pending_result else 0
+        metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
+
+    # Round all float values
+    metrics["avg_rejection"] = round(metrics["avg_rejection"], 2)
+    metrics["patrol_rej_avg"] = round(metrics["patrol_rej_avg"], 2)
+    metrics["line_rej_avg"] = round(metrics["line_rej_avg"], 2)
     
-    # STEP 7: Return structured metrics
-    return {
-        "total_lots": total_lots,
-        "pending_lots": pending_lots,
-        "avg_rejection": round(avg_rejection, 2),
-        "lots_exceeding_threshold": lots_exceeding,
-        "total_inspected_qty": int(total_inspected),
-        "total_rejected_qty": int(total_rejected),
-        "patrol_rej_avg": round(patrol_rej_avg, 2),
-        "line_rej_avg": round(line_rej_avg, 2),
-        "threshold_percentage": threshold
-    }
+    return metrics
 
 
 # ============================================================================
@@ -520,20 +520,20 @@ def get_incoming_inspection_report(filters=None):
     date = filters.get("date", today())
     
     # STEP 2: Build SQL query
-    # KEY PRINCIPLE: Start with Moulding Production Entry as source of truth
-    # FIXED: Changed item_to_manufacture to item_to_produce (correct field name)
+    # REFACTORED: Start from Inspection Entry as primary source
+    # Use LEFT JOIN to MPE for context data (operator, mould, production date)
     query = """
         SELECT DISTINCT
-            -- Inspection Entry fields
+            -- Inspection Entry fields (PRIMARY SOURCE)
             ie.posting_date AS date,
             ie.name AS inspection_entry,
             ie.inspector_name,
             ie.total_inspected_qty_nos AS insp_qty,
             ie.total_rejected_qty AS rej_qty,
             ie.total_rejected_qty_in_percentage AS rej_pct,
+            ie.lot_no,
             
-            -- Moulding Production Entry fields (SOURCE OF TRUTH)
-            mpe.scan_lot_number AS lot_no,
+            -- Moulding Production Entry fields (CONTEXT - may be NULL)
             mpe.item_to_produce AS item,
             mpe.mould_reference AS mould_ref,
             mpe.employee_name AS operator_name,
@@ -551,33 +551,33 @@ def get_incoming_inspection_report(filters=None):
             car.name as car_name,
             car.status as car_status
         
-        FROM `tabMoulding Production Entry` mpe
+        FROM `tabInspection Entry` ie
         
-        -- Join to Inspection Entry (Incoming Inspection)
-        INNER JOIN `tabInspection Entry` ie 
-            ON ie.lot_no = mpe.scan_lot_number
-            AND ie.inspection_type = 'Incoming Inspection'
-            AND ie.docstatus = 1
+        -- LEFT JOIN to Moulding Production Entry (context data)
+        LEFT JOIN `tabMoulding Production Entry` mpe
+            ON mpe.scan_lot_number = ie.lot_no
         
-        -- Left join to Deflashing Receipt Entry (may not exist for all lots)
+        -- LEFT JOIN to Deflashing Receipt Entry (may not exist for all lots)
         LEFT JOIN `tabDeflashing Receipt Entry` dre 
-            ON dre.lot_number = mpe.scan_lot_number
+            ON dre.lot_number = ie.lot_no
             AND dre.docstatus = 1
             
-        -- Left join to Warehouse for Deflasher Name (mapped via barcode)
+        -- LEFT JOIN to Warehouse for Deflasher Name (mapped via barcode)
         LEFT JOIN `tabWarehouse` wh
             ON wh.barcode_text = dre.scan_deflashing_vendor
         
-        -- Left join to Job Card for batch information
+        -- LEFT JOIN to Job Card for batch information
         LEFT JOIN `tabJob Card` jc 
             ON jc.name = mpe.job_card
             
-        -- Join to Corrective Action Report
+        -- LEFT JOIN to Corrective Action Report
         LEFT JOIN `tabCorrective Action Report` car
             ON car.inspection_entry = ie.name
             AND car.docstatus != 2
         
-        WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        WHERE ie.inspection_type = 'Incoming Inspection'
+        AND ie.docstatus = 1
+        AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') = %s
     """
     
     # STEP 3: Apply additional filters dynamically
@@ -593,7 +593,7 @@ def get_incoming_inspection_report(filters=None):
         params.append(f"%{filters['deflasher']}%")
     
     if filters.get("lot_no"):
-        conditions.append("mpe.scan_lot_number LIKE %s")
+        conditions.append("ie.lot_no LIKE %s")
         params.append(f"%{filters['lot_no']}%")
     
     if filters.get("mould_ref"):
@@ -603,7 +603,7 @@ def get_incoming_inspection_report(filters=None):
     if conditions:
         query += " AND " + " AND ".join(conditions)
     
-    query += " ORDER BY ie.posting_date DESC, mpe.scan_lot_number DESC"
+    query += " ORDER BY ie.posting_date DESC, ie.lot_no DESC"
     
     # STEP 4: Execute query
     data = frappe.db.sql(query, params, as_dict=True)
@@ -723,11 +723,11 @@ def get_final_inspection_report(filters=None):
     date = filters.get("date", today())
     
     # STEP 2: Build SQL query
-    # KEY PRINCIPLE: Start with Moulding Production Entry as source of truth
-    # NOTE: Uses SPP Inspection Entry (not regular Inspection Entry)
+    # REFACTORED: Start from SPP Inspection Entry as primary source
+    # Use LEFT JOIN to MPE for context data (operator, mould, production date)
     query = """
         SELECT DISTINCT
-            -- SPP Inspection Entry fields
+            -- SPP Inspection Entry fields (PRIMARY SOURCE)
             spp_ie.posting_date AS inspection_date,
             spp_ie.name AS spp_inspection_entry,
             spp_ie.lot_no,
@@ -743,7 +743,7 @@ def get_final_inspection_report(filters=None):
             spp_ie.warehouse,
             spp_ie.stage,
             
-            -- Moulding Production Entry fields (SOURCE OF TRUTH)
+            -- Moulding Production Entry fields (CONTEXT - may be NULL)
             mpe.item_to_produce AS item,
             mpe.mould_reference AS mould_ref,
             mpe.employee_name AS operator_name,
@@ -764,21 +764,19 @@ def get_final_inspection_report(filters=None):
             car.name as car_name,
             car.status as car_status
         
-        FROM `tabMoulding Production Entry` mpe
+        FROM `tabSPP Inspection Entry` spp_ie
         
-        -- Join to SPP Inspection Entry (Final Visual Inspection)
+        -- LEFT JOIN to Moulding Production Entry (context data)
         -- NOTE: SPP lot_no has suffix (e.g., "25H11U03-3"), MPE has base (e.g., "25H11U03")
         -- Use SUBSTRING_INDEX to extract base lot number before the dash
-        INNER JOIN `tabSPP Inspection Entry` spp_ie 
+        LEFT JOIN `tabMoulding Production Entry` mpe
             ON SUBSTRING_INDEX(spp_ie.lot_no, '-', 1) = mpe.scan_lot_number
-            AND spp_ie.inspection_type = 'Final Visual Inspection'
-            AND spp_ie.docstatus = 1
         
-        -- Left join to Job Card for production context
+        -- LEFT JOIN to Job Card for production context
         LEFT JOIN `tabJob Card` jc 
             ON jc.name = mpe.job_card
             
-        -- Join to Corrective Action Report
+        -- LEFT JOIN to Corrective Action Report
         LEFT JOIN `tabCorrective Action Report` car
             ON car.inspection_entry = spp_ie.name
             AND car.docstatus != 2
@@ -831,7 +829,9 @@ def get_final_inspection_report(filters=None):
             AND docstatus = 1
         ) lot_insp ON lot_insp.lot_no = SUBSTRING_INDEX(spp_ie.lot_no, '-', 1)
         
-        WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        WHERE spp_ie.inspection_type = 'Final Visual Inspection'
+        AND spp_ie.docstatus = 1
+        AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') = %s
     """
     
     # STEP 3: Apply additional filters dynamically
@@ -859,13 +859,13 @@ def get_final_inspection_report(filters=None):
         params.append(f"%{filters['mould_ref']}%")
     
     if filters.get("lot_no"):
-        conditions.append("mpe.scan_lot_number LIKE %s")
+        conditions.append("spp_ie.lot_no LIKE %s")
         params.append(f"%{filters['lot_no']}%")
     
     if conditions:
         query += " AND " + " AND ".join(conditions)
     
-    query += " ORDER BY spp_ie.posting_date DESC, mpe.scan_lot_number DESC"
+    query += " ORDER BY spp_ie.posting_date DESC, spp_ie.lot_no DESC"
     
     # STEP 4: Execute query
     data = frappe.db.sql(query, params, as_dict=True)
@@ -1516,7 +1516,7 @@ def generate_comprehensive_daily_report(date=None, threshold_percentage=5.0):
                     "rejected_qty": item.get("rejected_qty"),
                     "exceeds_threshold": item.get("exceeds_threshold"),
                     "car_required": item.get("car_required"),
-                    "car_reference": item.get("car_reference"),
+                    "car_reference": item.get("car_name"),
                     "car_status": item.get("car_status")
                 }
                 for item in lot_items
@@ -1536,10 +1536,10 @@ def generate_comprehensive_daily_report(date=None, threshold_percentage=5.0):
                     "diff_pct": item.get("diff_pct"),
                     "inspector_name": item.get("inspector_name"),
                     "insp_qty": item.get("insp_qty"),
-                    "rejected_qty": item.get("rejected_qty"),
+                    "rejected_qty": item.get("rej_qty"),
                     "rej_pct": item.get("rej_pct"),
                     "car_required": 1 if flt(item.get("rej_pct", 0)) > threshold_percentage else 0,
-                    "car_reference": item.get("car_reference"),
+                    "car_reference": item.get("car_name"),
                     "car_status": item.get("car_status")
                 }
                 for item in incoming_items
@@ -1548,13 +1548,14 @@ def generate_comprehensive_daily_report(date=None, threshold_percentage=5.0):
             "final_inspection_items": [
                 {
                     "spp_inspection_entry": item.get("spp_inspection_entry"),
+                    "inspection_date": item.get("inspection_date"),
                     "production_date": item.get("production_date"),
-                    "lot_no": item.get("lot_no"),
                     "shift_type": item.get("shift_type"),
                     "operator_name": item.get("operator_name"),
                     "press_number": item.get("press_number"),
                     "item": item.get("item"),
                     "mould_ref": item.get("mould_ref"),
+                    "lot_no": item.get("lot_no"),
                     "patrol_rej_pct": item.get("patrol_rej_pct"),
                     "line_rej_pct": item.get("line_rej_pct"),
                     "lot_rej_pct": item.get("lot_rej_pct"),
@@ -1565,25 +1566,25 @@ def generate_comprehensive_daily_report(date=None, threshold_percentage=5.0):
                     "warehouse": item.get("warehouse"),
                     "stage": item.get("stage"),
                     "exceeds_threshold": item.get("exceeds_threshold"),
-                    "car_required": item.get("car_required"),
-                    "car_reference": item.get("car_reference"),
+                    "car_required": 1 if flt(item.get("final_insp_rej_pct", 0)) > threshold_percentage else 0,
+                    "car_reference": item.get("car_name"),
                     "car_status": item.get("car_status")
                 }
                 for item in final_items
             ]
         })
         
-        report.insert()
+        report.insert(ignore_permissions=True)
         frappe.db.commit()
         
         return {
             "status": "success",
             "name": report.name,
-            "message": f"Daily Rejection Report created successfully for {date}"
+            "message": f"Report {report.name} created successfully"
         }
         
     except Exception as e:
-        frappe.log_error(message=str(e), title="Daily Report Generation Error")
+        frappe.log_error(f"Error generating daily report: {str(e)}", "Daily Report Generation")
         return {
             "status": "error",
             "message": str(e)

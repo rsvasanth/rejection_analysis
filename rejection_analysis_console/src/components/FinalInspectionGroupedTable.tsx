@@ -43,7 +43,7 @@ interface GroupedLot {
     avg_line_rej_pct: number
     avg_lot_rej_pct: number
     exceeds_threshold: boolean
-    production_date: string
+    inspection_date: string
     operator_name: string
     press_number: string
     item: string
@@ -107,7 +107,7 @@ export function FinalInspectionGroupedTable({
                 avg_line_rej_pct,
                 avg_lot_rej_pct,
                 exceeds_threshold: avg_final_rej_pct > first.threshold_percentage,
-                production_date: first.production_date,
+                inspection_date: first.inspection_date,
                 operator_name: first.operator_name,
                 press_number: first.press_number,
                 item: first.item,
@@ -219,7 +219,7 @@ export function FinalInspectionGroupedTable({
                                             )}
                                         </TableCell>
                                         <TableCell className="text-xs">
-                                            {group.production_date ? new Date(group.production_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }) : '—'}
+                                            {group.inspection_date ? new Date(group.inspection_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }) : '—'}
                                         </TableCell>
                                         <TableCell className="text-xs truncate">{group.shift_type || '—'}</TableCell>
                                         <TableCell className="text-xs truncate max-w-[110px]" title={group.operator_name}>
