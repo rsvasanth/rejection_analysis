@@ -824,21 +824,18 @@ def get_lot_inspection_report(filters=None):
         ) line ON line.lot_no = ie.lot_no
     """
     
-    # STEP 2.5: Build WHERE clause based on Work Planning lots
+    # STEP 2.5: Build WHERE clause using ONLY Work Planning lots
     if work_plan_lot_numbers:
-        # We have Work Planning lots - use IN clause OR moulding_date fallback
+        # Use ONLY Work Planning lot numbers (fast!)
         lot_list_str = "'" + "','".join(work_plan_lot_numbers) + "'"
         query += f"""
             WHERE ie.inspection_type = 'Lot Inspection'
             AND ie.docstatus = 1
-            AND (
-                ie.lot_no IN ({lot_list_str})
-                OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-            )
+            AND ie.lot_no IN ({lot_list_str})
         """
-        params = [date]
+        params = []
     else:
-        # No Work Planning lots - use only moulding_date
+        # No Work Planning - fallback to empty result or moulding_date
         query += """
             WHERE ie.inspection_type = 'Lot Inspection'
             AND ie.docstatus = 1
