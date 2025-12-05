@@ -798,36 +798,13 @@ def get_lot_inspection_report(filters=None):
             GROUP BY lot_no
         ) line ON line.lot_no = ie.lot_no
         
-        -- LEFT JOIN to Work Planning (for Shift 3 date logic)
-        LEFT JOIN `tabWork Plan Item` wpi 
-            ON wpi.lot_number = ie.lot_no
-        LEFT JOIN `tabWork Planning` wp 
-            ON wp.name = wpi.parent 
-            AND wp.date = %s 
-            AND wp.docstatus = 1
-        
-        -- LEFT JOIN to Addon Work Planning
-        LEFT JOIN `tabAdd On Work Plan Item` awpi 
-            ON awpi.lot_number = ie.lot_no
-        LEFT JOIN `tabAdd On Work Planning` awp 
-            ON awp.name = awpi.parent 
-            AND awp.date = %s 
-            AND awp.docstatus = 1
-        
         WHERE ie.inspection_type = 'Lot Inspection'
         AND ie.docstatus = 1
-        AND (
-            -- Include if lot is in Work Planning for this date
-            wp.name IS NOT NULL
-            -- OR in Addon Work Planning for this date
-            OR awp.name IS NOT NULL
-            -- OR moulding_date matches (fallback for unplanned)
-            OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-        )
+        AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
     """
     
     # STEP 3: Apply additional filters dynamically
-    params = [date, date, date]
+    params = [date]
     conditions = []
     
     if filters.get("operator_name"):
