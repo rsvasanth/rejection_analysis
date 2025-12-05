@@ -59,6 +59,12 @@ interface LotInspectionRecord {
   threshold_percentage: number
   car_name?: string
   car_status?: string
+  // Cost fields
+  unit_cost?: number
+  patrol_rejection_cost?: number
+  line_rejection_cost?: number
+  lot_rejection_cost?: number
+  total_rejection_cost?: number
 }
 
 interface FinalInspectionRecord {
@@ -85,6 +91,9 @@ interface FinalInspectionRecord {
   threshold_percentage: number
   car_name?: string
   car_status?: string
+  // Cost fields
+  unit_cost?: number
+  fvi_rejection_cost?: number
 }
 
 interface IncomingInspectionRecord {
@@ -107,6 +116,9 @@ interface IncomingInspectionRecord {
   threshold_percentage: number
   car_name?: string
   car_status?: string
+  // Cost fields
+  unit_cost?: number
+  rejection_cost?: number
 }
 
 function MetricCard({
@@ -221,6 +233,7 @@ function InspectionRecordsTable({
               <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Patrol</TableHead>
               <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Line</TableHead>
               <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Lot</TableHead>
+              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50">Cost</TableHead>
               <TableHead className="w-[80px] sticky top-0 bg-muted/50">Status</TableHead>
               <TableHead className="w-[100px] sticky top-0 bg-muted/50">Action</TableHead>
             </TableRow>
@@ -266,6 +279,11 @@ function InspectionRecordsTable({
                       ? `${(record.lot_rej_pct || record.rej_pct || 0).toFixed(1)}%`
                       : '—'}
                   </span>
+                </TableCell>
+                <TableCell className="text-right text-xs font-medium">
+                  {record.total_rejection_cost !== undefined && record.total_rejection_cost > 0
+                    ? `₹${record.total_rejection_cost.toFixed(0)}`
+                    : '—'}
                 </TableCell>
                 <TableCell>
                   {record.exceeds_threshold ? (
@@ -360,13 +378,14 @@ function IncomingInspectionTable({
               <TableHead className="w-[100px] sticky top-0 bg-muted/50">Deflasher</TableHead>
               <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50">Sent</TableHead>
               <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50">Recv</TableHead>
-              <TableHead className="w-[60px] text-center sticky top-0 bg-muted/50">Diff</TableHead>
+              <TableHead className="w-[60px] text-right sticky top-0 bg-muted/50">Diff%</TableHead>
               <TableHead className="w-[100px] sticky top-0 bg-muted/50">Inspector</TableHead>
               <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50">Insp</TableHead>
-              <TableHead className="w-[60px] text-right sticky top-0 bg-muted/50">Rej</TableHead>
-              <TableHead className="w-[60px] text-center sticky top-0 bg-muted/50">REJ%</TableHead>
+              <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50">Rej</TableHead>
+              <TableHead className="w-[60px] text-right sticky top-0 bg-muted/50">Rej%</TableHead>
+              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50">Cost</TableHead>
               <TableHead className="w-[80px] sticky top-0 bg-muted/50">Status</TableHead>
-              <TableHead className="w-[100px] sticky top-0 bg-muted/50">Action</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted/50">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -414,6 +433,11 @@ function IncomingInspectionTable({
                   <span className="font-bold">
                     {record.rej_pct !== undefined ? `${record.rej_pct.toFixed(1)}%` : '—'}
                   </span>
+                </TableCell>
+                <TableCell className="text-right text-xs font-medium">
+                  {record.rejection_cost !== undefined && record.rejection_cost > 0
+                    ? `₹${record.rejection_cost.toFixed(0)}`
+                    : '—'}
                 </TableCell>
                 <TableCell>
                   {record.exceeds_threshold ? (
@@ -677,6 +701,8 @@ function RejectionAnalysisPage() {
       { key: 'patrol_rej_pct', label: 'Patrol %' },
       { key: 'line_rej_pct', label: 'Line %' },
       { key: 'lot_rej_pct', label: 'Lot %' },
+      { key: 'unit_cost', label: 'Unit Cost' },
+      { key: 'total_rejection_cost', label: 'Total Cost' },
     ]
     exportToCSV(lotRecords, 'lot_inspection', headers)
   }
@@ -696,6 +722,8 @@ function RejectionAnalysisPage() {
       { key: 'insp_qty', label: 'Insp Qty' },
       { key: 'rej_qty', label: 'Rej Qty' },
       { key: 'rej_pct', label: 'Rej %' },
+      { key: 'unit_cost', label: 'Unit Cost' },
+      { key: 'rejection_cost', label: 'Rejection Cost' },
     ]
     exportToCSV(incomingRecords, 'incoming_inspection', headers)
   }
@@ -715,6 +743,8 @@ function RejectionAnalysisPage() {
       { key: 'line_rej_pct', label: 'Line %' },
       { key: 'lot_rej_pct', label: 'Lot %' },
       { key: 'final_insp_rej_pct', label: 'Final %' },
+      { key: 'unit_cost', label: 'Unit Cost' },
+      { key: 'fvi_rejection_cost', label: 'FVI Cost' },
     ]
     exportToCSV(finalRecords, 'final_inspection', headers)
   }

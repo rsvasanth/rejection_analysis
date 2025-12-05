@@ -731,7 +731,7 @@ def get_lot_inspection_report(filters=None):
             ie.machine_no as press_number,
             ie.operator_name as ie_operator_name,
             ie.total_rejected_qty_in_percentage as lot_rej_pct,
-            ie.total_inspected_qty_nos,
+            ie.inspected_qty_nos,
             ie.total_rejected_qty,
             
             -- Moulding Production Entry fields (SOURCE OF TRUTH)
@@ -748,7 +748,14 @@ def get_lot_inspection_report(filters=None):
             
             -- CAR Information
             car.name as car_name,
-            car.status as car_status
+            car.status as car_status,
+            
+            -- Cost fields from Daily Rejection Report
+            lotitem.unit_cost,
+            lotitem.patrol_rejection_cost,
+            lotitem.line_rejection_cost,
+            lotitem.lot_rejection_cost,
+            lotitem.total_rejection_cost
         
         FROM `tabInspection Entry` ie
         
@@ -764,6 +771,10 @@ def get_lot_inspection_report(filters=None):
         LEFT JOIN `tabCorrective Action Report` car
             ON car.inspection_entry = ie.name
             AND car.docstatus != 2
+        
+        -- Join to Daily Rejection Report Lot Item (for cost data)
+        LEFT JOIN `tabLot Inspection Report Item` lotitem
+            ON lotitem.inspection_entry = ie.name
         
         -- Subquery: Aggregate Patrol Inspection rejection percentage by lot
         LEFT JOIN (
@@ -845,13 +856,22 @@ def get_lot_inspection_report(filters=None):
             "item_code": row.get("item_code"),
             "mould_ref": row.get("mould_reference"),
             "lot_no": row.get("lot_no"),
+            "inspected_qty": flt(row.get("inspected_qty_nos", 0)),
+            "rejected_qty": flt(row.get("total_rejected_qty", 0)),
             "patrol_rej_pct": round(flt(row.get("patrol_rej_pct", 0)), 2),
             "line_rej_pct": round(flt(row.get("line_rej_pct", 0)), 2),
             "lot_rej_pct": round(flt(row.get("lot_rej_pct", 0)), 2),
             "exceeds_threshold": flt(row.get("lot_rej_pct", 0)) > threshold,
             "threshold_percentage": threshold,
+            # CAR fields
             "car_name": row.get("car_name"),
-            "car_status": row.get("car_status")
+            "car_status": row.get("car_status"),
+            # Cost fields
+            "unit_cost": flt(row.get("unit_cost", 0)),
+            "patrol_rejection_cost": flt(row.get("patrol_rejection_cost", 0)),
+            "line_rejection_cost": flt(row.get("line_rejection_cost", 0)),
+            "lot_rejection_cost": flt(row.get("lot_rejection_cost", 0)),
+            "total_rejection_cost": flt(row.get("total_rejection_cost", 0))
         }
         results.append(result)
     
@@ -956,7 +976,11 @@ def get_incoming_inspection_report(filters=None):
             
             -- CAR Information
             car.name as car_name,
-            car.status as car_status
+            car.status as car_status,
+            
+            -- Cost fields from Daily Rejection Report
+            incitem.unit_cost,
+            incitem.rejection_cost
         
         FROM `tabInspection Entry` ie
         
@@ -981,6 +1005,10 @@ def get_incoming_inspection_report(filters=None):
         LEFT JOIN `tabCorrective Action Report` car
             ON car.inspection_entry = ie.name
             AND car.docstatus != 2
+        
+        -- LEFT JOIN to Daily Rejection Report Incoming Item (for cost data)
+        LEFT JOIN `tabIncoming Inspection Report Item` incitem
+            ON incitem.inspection_entry = ie.name
         
         WHERE ie.inspection_type = 'Incoming Inspection'
         AND ie.docstatus = 1
@@ -1039,7 +1067,10 @@ def get_incoming_inspection_report(filters=None):
             "exceeds_threshold": flt(row.get("rej_pct", 0)) > threshold,
             "threshold_percentage": threshold,
             "car_name": row.get("car_name"),
-            "car_status": row.get("car_status")
+            "car_status": row.get("car_status"),
+            # Cost fields
+            "unit_cost": flt(row.get("unit_cost", 0)),
+            "rejection_cost": flt(row.get("rejection_cost", 0))
         }
         results.append(result)
     
@@ -1169,7 +1200,11 @@ def get_final_inspection_report(filters=None):
             
             -- CAR Information
             car.name as car_name,
-            car.status as car_status
+            car.status as car_status,
+            
+            -- Cost fields from Daily Rejection Report
+            finalitem.unit_cost,
+            finalitem.fvi_rejection_cost
         
         FROM `tabSPP Inspection Entry` spp_ie
         
@@ -1187,6 +1222,10 @@ def get_final_inspection_report(filters=None):
         LEFT JOIN `tabCorrective Action Report` car
             ON car.inspection_entry = spp_ie.name
             AND car.docstatus != 2
+        
+        -- LEFT JOIN to Daily Rejection Report Final Item (for cost data)
+        LEFT JOIN `tabFinal Inspection Report Item` finalitem
+            ON finalitem.spp_inspection_entry = spp_ie.name
         
         -- Subquery: Aggregate Patrol Inspection rejection percentage
         LEFT JOIN (
@@ -1353,7 +1392,10 @@ def get_final_inspection_report(filters=None):
             "exceeds_threshold": flt(row.get("final_insp_rej_pct", 0)) > threshold,
             "threshold_percentage": threshold,
             "car_name": row.get("car_name"),
-            "car_status": row.get("car_status")
+            "car_status": row.get("car_status"),
+            # Cost fields
+            "unit_cost": flt(row.get("unit_cost", 0)),
+            "fvi_rejection_cost": flt(row.get("fvi_rejection_cost", 0))
         }
         results.append(result)
     

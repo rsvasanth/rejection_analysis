@@ -30,6 +30,9 @@ interface FinalInspectionRecord {
     car_name?: string
     car_status?: string
     trimming_operator?: string
+    // Cost fields
+    unit_cost?: number
+    fvi_rejection_cost?: number
 }
 
 interface GroupedLot {
@@ -189,6 +192,7 @@ export function FinalInspectionGroupedTable({
                             <TableHead className="w-[70px] text-center">Line</TableHead>
                             <TableHead className="w-[70px] text-center">Lot</TableHead>
                             <TableHead className="w-[70px] text-center">Final</TableHead>
+                            <TableHead className="w-[80px] text-right">Cost</TableHead>
                             <TableHead className="w-[80px]">Status</TableHead>
                             <TableHead className="w-[100px]">Action</TableHead>
                         </TableRow>
@@ -256,11 +260,16 @@ export function FinalInspectionGroupedTable({
                                             {group.avg_lot_rej_pct.toFixed(1)}%
                                         </TableCell>
                                         <TableCell
-                                            className={`text-center text-xs ${getRejectionColor(group.avg_final_rej_pct)} cursor-pointer hover:underline`}
-                                            onClick={() => onShowRejectionDetails(group.sublots[0].spp_inspection_entry, 'SPP Inspection Entry')}
+                                            className={`text-center text-xs ${getRejectionColor(group.avg_final_rej_pct)} font-bold cursor-pointer hover:underline`}
+                                            onClick={() => onShowRejectionDetails(group.most_critical_sublot.spp_inspection_entry, 'SPP Inspection Entry')}
                                             title="Click to see defect details"
                                         >
-                                            <span className="font-bold">{group.avg_final_rej_pct.toFixed(1)}%</span>
+                                            {group.avg_final_rej_pct.toFixed(1)}%
+                                        </TableCell>
+                                        <TableCell className="text-right text-xs font-medium">
+                                            {group.sublots.reduce((sum, s) => sum + (s.fvi_rejection_cost || 0), 0) > 0
+                                                ? `₹${group.sublots.reduce((sum, s) => sum + (s.fvi_rejection_cost || 0), 0).toFixed(0)}`
+                                                : '—'}
                                         </TableCell>
                                         <TableCell>
                                             {group.exceeds_threshold ? (

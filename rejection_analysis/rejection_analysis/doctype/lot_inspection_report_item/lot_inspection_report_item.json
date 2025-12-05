@@ -1,169 +1,267 @@
 {
- "actions": [],
- "allow_rename": 1,
- "creation": "2025-11-29 00:00:00.000000",
- "doctype": "DocType",
- "editable_grid": 1,
- "engine": "InnoDB",
- "field_order": [
-  "inspection_entry",
-  "production_date",
-  "lot_no",
-  "column_break_1",
-  "shift_type",
-  "operator_name",
-  "press_number",
-  "column_break_2",
-  "item_code",
-  "mould_ref",
-  "section_break_3",
-  "patrol_rej_pct",
-  "line_rej_pct",
-  "column_break_4",
-  "lot_rej_pct",
-  "exceeds_threshold",
-  "section_break_5",
-  "inspected_qty",
-  "rejected_qty",
-  "column_break_6",
-  "car_required",
-  "car_reference",
-  "car_status"
- ],
- "fields": [
-  {
-   "fieldname": "inspection_entry",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Inspection Entry",
-   "options": "Inspection Entry",
-   "reqd": 1
-  },
-  {
-   "fieldname": "production_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Production Date"
-  },
-  {
-   "fieldname": "lot_no",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Lot No",
-   "reqd": 1
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "shift_type",
-   "fieldtype": "Data",
-   "label": "Shift"
-  },
-  {
-   "fieldname": "operator_name",
-   "fieldtype": "Data",
-   "label": "Operator"
-  },
-  {
-   "fieldname": "press_number",
-   "fieldtype": "Data",
-   "label": "Press"
-  },
-  {
-   "fieldname": "column_break_2",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "item_code",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Item",
-   "options": "Item"
-  },
-  {
-   "fieldname": "mould_ref",
-   "fieldtype": "Data",
-   "label": "Mould Ref"
-  },
-  {
-   "fieldname": "section_break_3",
-   "fieldtype": "Section Break",
-   "label": "Rejection Stages"
-  },
-  {
-   "fieldname": "patrol_rej_pct",
-   "fieldtype": "Percent",
-   "label": "Patrol Rej %"
-  },
-  {
-   "fieldname": "line_rej_pct",
-   "fieldtype": "Percent",
-   "label": "Line Rej %"
-  },
-  {
-   "fieldname": "column_break_4",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "lot_rej_pct",
-   "fieldtype": "Percent",
-   "in_list_view": 1,
-   "label": "Lot Rej %"
-  },
-  {
-   "fieldname": "exceeds_threshold",
-   "fieldtype": "Check",
-   "label": "Exceeds Threshold"
-  },
-  {
-   "fieldname": "section_break_5",
-   "fieldtype": "Section Break",
-   "label": "Quantity Details"
-  },
-  {
-   "fieldname": "inspected_qty",
-   "fieldtype": "Float",
-   "label": "Inspected Qty"
-  },
-  {
-   "fieldname": "rejected_qty",
-   "fieldtype": "Float",
-   "label": "Rejected Qty"
-  },
-  {
-   "fieldname": "column_break_6",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "car_required",
-   "fieldtype": "Check",
-   "label": "CAR Required"
-  },
-  {
-   "fieldname": "car_reference",
-   "fieldtype": "Link",
-   "label": "CAR Reference",
-   "options": "Corrective Action Report"
-  },
-  {
-   "fieldname": "car_status",
-   "fieldtype": "Data",
-   "label": "CAR Status",
-   "read_only": 1
-  }
- ],
- "index_web_pages_for_search": 1,
- "istable": 1,
- "links": [],
- "modified": "2025-11-29 00:00:00.000000",
- "modified_by": "Administrator",
- "module": "Rejection Analysis",
- "name": "Lot Inspection Report Item",
- "owner": "Administrator",
- "permissions": [],
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": []
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-11-29 00:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "inspection_entry",
+        "production_date",
+        "lot_no",
+        "column_break_1",
+        "shift_type",
+        "operator_name",
+        "press_number",
+        "column_break_2",
+        "item_code",
+        "mould_ref",
+        "section_break_3",
+        "patrol_rej_pct",
+        "line_rej_pct",
+        "column_break_4",
+        "lot_rej_pct",
+        "exceeds_threshold",
+        "section_break_qty",
+        "patrol_rejected_qty",
+        "line_rejected_qty",
+        "column_break_qty",
+        "lot_rejected_qty",
+        "total_rejected_qty",
+        "section_break_5",
+        "inspected_qty",
+        "rejected_qty",
+        "column_break_6",
+        "section_break_cost",
+        "unit_cost",
+        "total_rejection_cost",
+        "column_break_cost",
+        "patrol_rejection_cost",
+        "line_rejection_cost",
+        "lot_rejection_cost",
+        "section_break_car",
+        "car_required",
+        "car_reference",
+        "car_status"
+    ],
+    "fields": [
+        {
+            "fieldname": "inspection_entry",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Inspection Entry",
+            "options": "Inspection Entry",
+            "reqd": 1
+        },
+        {
+            "fieldname": "production_date",
+            "fieldtype": "Date",
+            "in_list_view": 1,
+            "label": "Production Date"
+        },
+        {
+            "fieldname": "lot_no",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Lot No",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "shift_type",
+            "fieldtype": "Data",
+            "label": "Shift"
+        },
+        {
+            "fieldname": "operator_name",
+            "fieldtype": "Data",
+            "label": "Operator"
+        },
+        {
+            "fieldname": "press_number",
+            "fieldtype": "Data",
+            "label": "Press"
+        },
+        {
+            "fieldname": "column_break_2",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "item_code",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Item",
+            "options": "Item"
+        },
+        {
+            "fieldname": "mould_ref",
+            "fieldtype": "Data",
+            "label": "Mould Ref"
+        },
+        {
+            "fieldname": "section_break_3",
+            "fieldtype": "Section Break",
+            "label": "Rejection Stages"
+        },
+        {
+            "fieldname": "patrol_rej_pct",
+            "fieldtype": "Percent",
+            "label": "Patrol Rej %"
+        },
+        {
+            "fieldname": "line_rej_pct",
+            "fieldtype": "Percent",
+            "label": "Line Rej %"
+        },
+        {
+            "fieldname": "column_break_4",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "lot_rej_pct",
+            "fieldtype": "Percent",
+            "in_list_view": 1,
+            "label": "Lot Rej %"
+        },
+        {
+            "fieldname": "exceeds_threshold",
+            "fieldtype": "Check",
+            "label": "Exceeds Threshold"
+        },
+        {
+            "fieldname": "section_break_qty",
+            "fieldtype": "Section Break",
+            "label": "Stage-wise Rejected Quantities"
+        },
+        {
+            "fieldname": "patrol_rejected_qty",
+            "fieldtype": "Float",
+            "label": "Patrol Rejected Qty",
+            "read_only": 1
+        },
+        {
+            "fieldname": "line_rejected_qty",
+            "fieldtype": "Float",
+            "label": "Line Rejected Qty",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_qty",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "lot_rejected_qty",
+            "fieldtype": "Float",
+            "label": "Lot Rejected Qty",
+            "read_only": 1
+        },
+        {
+            "fieldname": "total_rejected_qty",
+            "fieldtype": "Float",
+            "label": "Total Rejected Qty",
+            "read_only": 1,
+            "bold": 1
+        },
+        {
+            "fieldname": "section_break_5",
+            "fieldtype": "Section Break",
+            "label": "Quantity Details"
+        },
+        {
+            "fieldname": "inspected_qty",
+            "fieldtype": "Float",
+            "label": "Inspected Qty"
+        },
+        {
+            "fieldname": "rejected_qty",
+            "fieldtype": "Float",
+            "label": "Rejected Qty"
+        },
+        {
+            "fieldname": "column_break_6",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "section_break_cost",
+            "fieldtype": "Section Break",
+            "label": "Cost Details"
+        },
+        {
+            "fieldname": "unit_cost",
+            "fieldtype": "Currency",
+            "label": "Unit Cost",
+            "read_only": 1,
+            "precision": 2
+        },
+        {
+            "fieldname": "total_rejection_cost",
+            "fieldtype": "Currency",
+            "label": "Total Rejection Cost",
+            "read_only": 1,
+            "precision": 2,
+            "bold": 1
+        },
+        {
+            "fieldname": "column_break_cost",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "patrol_rejection_cost",
+            "fieldtype": "Currency",
+            "label": "Patrol Rejection Cost",
+            "read_only": 1,
+            "precision": 2
+        },
+        {
+            "fieldname": "line_rejection_cost",
+            "fieldtype": "Currency",
+            "label": "Line Rejection Cost",
+            "read_only": 1,
+            "precision": 2
+        },
+        {
+            "fieldname": "lot_rejection_cost",
+            "fieldtype": "Currency",
+            "label": "Lot Rejection Cost",
+            "read_only": 1,
+            "precision": 2
+        },
+        {
+            "fieldname": "section_break_car",
+            "fieldtype": "Section Break",
+            "label": "CAR Details"
+        },
+        {
+            "fieldname": "car_required",
+            "fieldtype": "Check",
+            "label": "CAR Required"
+        },
+        {
+            "fieldname": "car_reference",
+            "fieldtype": "Link",
+            "label": "CAR Reference",
+            "options": "Corrective Action Report"
+        },
+        {
+            "fieldname": "car_status",
+            "fieldtype": "Data",
+            "label": "CAR Status",
+            "read_only": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "istable": 1,
+    "links": [],
+    "modified": "2025-11-29 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Rejection Analysis",
+    "name": "Lot Inspection Report Item",
+    "owner": "Administrator",
+    "permissions": [],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
 }
