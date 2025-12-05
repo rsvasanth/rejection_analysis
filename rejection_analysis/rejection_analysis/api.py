@@ -800,11 +800,32 @@ def get_lot_inspection_report(filters=None):
         
         WHERE ie.inspection_type = 'Lot Inspection'
         AND ie.docstatus = 1
-        AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        AND (
+            -- Primary: Include lots from Work Planning (handles Shift 3 submitted next day)
+            ie.lot_no IN (
+                -- Regular Work Planning
+                SELECT wpi.lot_number
+                FROM `tabWork Planning` wp
+                INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
+                WHERE wp.date = %s
+                AND wp.docstatus = 1
+                
+                UNION
+                
+                -- Add On Work Planning
+                SELECT awpi.lot_number
+                FROM `tabAdd On Work Planning` awp
+                INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
+                WHERE awp.date = %s
+                AND awp.docstatus = 1
+            )
+            -- Fallback: Include unplanned lots with matching moulding_date
+            OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        )
     """
     
     # STEP 3: Apply additional filters dynamically
-    params = [date]
+    params = [date, date, date]
     conditions = []
     
     if filters.get("operator_name"):
