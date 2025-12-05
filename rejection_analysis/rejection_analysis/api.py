@@ -797,37 +797,53 @@ def get_lot_inspection_report(filters=None):
             AND docstatus = 1
             GROUP BY lot_no
         ) line ON line.lot_no = ie.lot_no
-        
-        -- LEFT JOIN to Work Planning lots (for date filtering)
-        LEFT JOIN (
-            -- Get all planned lots for the date
-            SELECT DISTINCT wpi.lot_number
-            FROM `tabWork Planning` wp
-            INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
-            WHERE wp.date = %s
-            AND wp.docstatus = 1
-            
-            UNION
-            
-            SELECT DISTINCT awpi.lot_number
-            FROM `tabAdd On Work Planning` awp
-            INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
-            WHERE awp.date = %s
-            AND awp.docstatus = 1
-        ) planned_lots ON planned_lots.lot_number = ie.lot_no
-        
-        WHERE ie.inspection_type = 'Lot Inspection'
-        AND ie.docstatus = 1
-        AND (
-            -- Primary: Lot is in Work Planning (handles Shift 3 submitted next day)
-            planned_lots.lot_number IS NOT NULL
-            -- Fallback: Include unplanned lots with matching moulding_date
-            OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
-        )
     """
     
+    # FETCH WORK PLANNING LOTS FIRST (in Python - faster than SQL subqueries!)
+    planned_lots_query = """
+        SELECT DISTINCT wpi.lot_number
+        FROM `tabWork Planning` wp
+        INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
+        WHERE wp.date = %s
+        AND wp.docstatus = 1
+        
+        UNION
+        
+        SELECT DISTINCT awpi.lot_number
+        FROM `tabAdd On Work Planning` awp
+        INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
+        WHERE awp.date = %s
+        AND awp.docstatus = 1
+    """
+    
+    planned_lots = frappe.db.sql(planned_lots_query, (date, date), as_dict=False)
+    planned_lot_numbers = [lot[0] for lot in planned_lots] if planned_lots else []
+    
+    # Build WHERE clause based on whether we have planned lots
+    if planned_lot_numbers:
+        # Use IN clause with explicit lot list (fast!)
+        lot_list = ", ".join(["%s"] * len(planned_lot_numbers))
+        params = planned_lot_numbers + [date] # Parameters for the main query's WHERE clause
+        where_clause = f"""
+            WHERE ie.inspection_type = 'Lot Inspection'
+            AND ie.docstatus = 1
+            AND (
+                ie.lot_no IN ({lot_list})
+                OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            )
+        """
+    else:
+        # No planned lots - just use moulding_date
+        params = [date] # Parameters for the main query's WHERE clause
+        where_clause = """
+            WHERE ie.inspection_type = 'Lot Inspection'
+            AND ie.docstatus = 1
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        """
+        
+    query += where_clause
+    
     # STEP 3: Apply additional filters dynamically
-    params = [date, date, date]
     conditions = []
     
     if filters.get("operator_name"):
