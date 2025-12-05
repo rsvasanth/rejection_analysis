@@ -405,6 +405,257 @@ def get_performance_rankings(period="30d", dimension="machine", limit=10, end_da
 
 
 # ============================================================================
+# CROSS-SITE PRICING API HELPERS
+# ============================================================================
+
+def fetch_remote_item_prices_batch(item_codes, remote_url, api_key, api_secret):
+    """
+    Fetch item prices from remote Sales site via API.
+    Fetches from Item Price (price list) instead of Item.standard_rate.
+    
+    Args:
+        item_codes: List of item codes to fetch prices for
+        remote_url: URL of remote site
+        api_key: API key for authentication
+        api_secret: API secret for authentication
+    
+    Returns:
+        dict: Mapping of item_code -> price_list_rate
+    """
+    import requests
+    import json
+    from frappe.utils import flt
+    
+    if not item_codes or not remote_url or not api_key or not api_secret:
+        return {}
+    
+    try:
+        # Query Item Price for Standard Selling price list
+        filters = [
+            ["item_code", "in", item_codes],
+            ["price_list", "=", "Standard Selling"]
+        ]
+        fields = ["item_code", "price_list_rate"]
+        
+        response = requests.get(
+            f"{remote_url}/api/resource/Item Price",
+            params={
+                "filters": json.dumps(filters),
+                "fields": json.dumps(fields),
+                "limit_page_length": 500
+            },
+            headers={
+                "Authorization": f"token {api_key}:{api_secret}"
+            },
+            timeout=10  # 10 second timeout
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Build map of item_code -> price
+            price_map = {}
+            for item_price in data.get("data", []):
+                item_code = item_price.get("item_code")
+                rate = flt(item_price.get("price_list_rate", 0))
+                if item_code and rate > 0:
+                    price_map[item_code] = rate
+            
+            return price_map
+        else:
+            # Truncate response text to prevent character length errors
+            error_text = response.text[:500] if response.text else "No response"
+            frappe.log_error(
+                f"Remote pricing API returned {response.status_code}: {error_text}",
+                "Remote Pricing Fetch Error"
+            )
+            return {}
+            
+    except requests.exceptions.Timeout:
+        frappe.log_error("Remote pricing API timeout after 10 seconds", "Remote Pricing Timeout")
+        return {}
+    except Exception as e:
+        # Truncate exception message to prevent character length errors
+        error_msg = str(e)[:300]
+        frappe.log_error(f"Remote pricing fetch failed: {error_msg}", "Remote Pricing Error")
+        return {}
+
+
+@frappe.whitelist()
+def get_cost_impact_analysis(period="30d", end_date=None):
+    """
+    Calculate cost impact of rejections using item pricing from remote Sales site.
+    Uses Daily Rejection Report for simplified, performant queries.
+    
+    Args:
+        period: Time period - "7d", "30d", "3m", "6m", "ytd"
+        end_date: Optional end date (defaults to today)
+    
+    Returns:
+        List of cost data by period with item-level breakdown
+    """
+    from datetime import datetime, timedelta
+    from frappe.utils import flt, getdate
+    
+    # Parse end date
+    if end_date:
+        end_dt = getdate(end_date)
+    else:
+        end_dt = datetime.now().date()
+    
+    # Calculate start date and grouping based on period
+    if period == "7d":
+        start_dt = end_dt - timedelta(days=7)
+        date_format = "%Y-%m-%d"
+        group_by = "day"
+    elif period == "3m":
+        start_dt = end_dt - timedelta(days=90)
+        date_format = "%Y-%m"
+        group_by = "month"
+    elif period == "6m":
+        start_dt = end_dt - timedelta(days=180)
+        date_format = "%Y-%m"
+        group_by = "month"
+    elif period == "ytd":
+        start_dt = datetime(end_dt.year, 1, 1).date()
+        date_format = "%Y-%m"
+        group_by = "month"
+    else:
+        start_dt = end_dt - timedelta(days=30)
+        date_format = "%Y-%m-%d"
+        group_by = "day"
+    
+    start_date = start_dt.strftime('%Y-%m-%d')
+    end_date_str = end_dt.strftime('%Y-%m-%d')
+    
+    # Get all rejections with item codes from Daily Rejection Report
+    # Note: Includes both draft (docstatus=0) and submitted (docstatus=1) reports
+    # Handles items like: T5060, t.T2438, T4012 TI
+    # Returns ALL dates with rejections, even if no pricing available
+    query = """
+        SELECT 
+            DATE_FORMAT(report_date, %s) as period_date,
+            item_code,
+            SUM(rejected_qty) as total_rejected,
+            SUM(inspected_qty) as total_inspected
+        FROM (
+            -- Incoming Inspection items
+            SELECT 
+                drr.report_date as report_date,
+                ii.item as item_code,
+                ii.rejected_qty as rejected_qty,
+                ii.insp_qty as inspected_qty
+            FROM `tabDaily Rejection Report` drr
+            INNER JOIN `tabIncoming Inspection Report Item` ii ON ii.parent = drr.name
+            WHERE drr.report_date BETWEEN %s AND %s
+            AND ii.item IS NOT NULL
+            AND (ii.item LIKE 'T%%' OR ii.item LIKE 't.T%%' OR ii.item LIKE 't.%%')
+            
+            UNION ALL
+            
+            -- Final Inspection items
+            SELECT 
+                drr.report_date as report_date,
+                fi.item as item_code,
+                fi.final_rej_qty as rejected_qty,
+                fi.final_insp_qty as inspected_qty
+            FROM `tabDaily Rejection Report` drr
+            INNER JOIN `tabFinal Inspection Report Item` fi ON fi.parent = drr.name
+            WHERE drr.report_date BETWEEN %s AND %s
+            AND fi.item IS NOT NULL
+            AND (fi.item LIKE 'T%%' OR fi.item LIKE 't.T%%' OR fi.item LIKE 't.%%')
+        ) combined
+        GROUP BY period_date, item_code
+        ORDER BY period_date
+    """
+    
+    results = frappe.db.sql(query, (date_format, start_date, end_date_str, 
+                                    start_date, end_date_str), as_dict=1)
+    
+    if not results:
+        return []
+    
+    # Collect all unique F-item codes for batch pricing fetch (transform T → F)
+    pricing_item_codes = set()
+    for row in results:
+        item_code = row.item_code
+        if item_code:
+            # Clean up item code: remove 't.', 'T.', spaces, then check if starts with T
+            cleaned = item_code.strip().replace('t.', '').replace('T.', '').split()[0]  # Get first word
+            if cleaned.upper().startswith('T'):
+                # Transform T → F (e.g., T5060 → F5060, TDS001 → FDS001)
+                pricing_item_code = 'F' + cleaned[1:]
+                pricing_item_codes.add(pricing_item_code)
+    
+    # Configure remote site credentials from Settings
+    try:
+        settings = frappe.get_single("Rejection Analysis Settings")
+        remote_url = settings.sales_site_url or ""
+        api_key = settings.sales_site_api_key or ""
+        api_secret = settings.get_password("sales_site_api_secret") or ""
+    except Exception:
+        # Fallback to site_config if settings not configured
+        remote_url = frappe.conf.get("sales_site_url") or ""
+        api_key = frappe.conf.get("sales_site_api_key") or ""
+        api_secret = frappe.conf.get("sales_site_api_secret") or ""
+    
+    # Fetch all pricing data in one batch API call
+    pricing_map = {}
+    if pricing_item_codes and remote_url and api_key and api_secret:
+        pricing_map = fetch_remote_item_prices_batch(
+            list(pricing_item_codes),
+            remote_url,
+            api_key,
+            api_secret
+        )
+    
+    # Calculate costs by period using fetched pricing
+    # Include ALL dates and items, even if pricing is not available (shows as ₹0)
+    cost_data = {}
+    
+    for row in results:
+        item_code = row.item_code
+        period_date = row.period_date
+        rejected_qty = flt(row.total_rejected)
+        
+        # Initialize period if not exists
+        if period_date not in cost_data:
+            cost_data[period_date] = {
+                "period": period_date,
+                "total_cost": 0,
+                "total_rejected_qty": 0,
+                "items": []
+            }
+        
+        # Add rejected quantity regardless of pricing
+        cost_data[period_date]["total_rejected_qty"] += rejected_qty
+        
+        if item_code and rejected_qty > 0:
+            # Clean up item code same way as above
+            cleaned = item_code.strip().replace('t.', '').replace('T.', '').split()[0]
+            if cleaned.upper().startswith('T'):
+                # Transform T → F
+                pricing_item_code = 'F' + cleaned[1:]
+                unit_cost = pricing_map.get(pricing_item_code, 0)
+                
+                # Calculate cost (will be 0 if no pricing)
+                cost = rejected_qty * unit_cost
+                cost_data[period_date]["total_cost"] += cost
+                
+                # Add item to list (even if cost is 0, for visibility)
+                cost_data[period_date]["items"].append({
+                    "item_code": pricing_item_code,
+                    "rejected_qty": rejected_qty,
+                    "unit_cost": unit_cost,
+                    "total_cost": cost
+                })
+    
+    # Convert to sorted list
+    result = sorted(cost_data.values(), key=lambda x: x["period"])
+    
+    return result
+
+
+# ============================================================================
 # LOT INSPECTION REPORT API
 # ============================================================================
 

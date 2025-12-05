@@ -41,6 +41,11 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Cost Analysis",
+      url: "/cost-analysis",
+      icon: IconChartBar,
+    },
+    {
       title: "Reports",
       url: "/reports",
       icon: IconFileAnalytics,

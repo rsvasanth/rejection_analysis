@@ -19,6 +19,7 @@ const router = createBrowserRouter(
         <Route path="/dashboard" lazy={() => import('@/pages/Dashboard')} />
         <Route path="/rejection-analysis" lazy={() => import('@/pages/RejectionAnalysis')} />
         <Route path="/performance-rankings" lazy={() => import('@/pages/PerformanceRankings')} />
+        <Route path="/cost-analysis" lazy={() => import('@/pages/CostAnalysis')} />
         <Route path="/reports" lazy={() => import('@/pages/Reports')} />
         <Route path="/settings" lazy={() => import('@/pages/Settings')} />
       </Route>

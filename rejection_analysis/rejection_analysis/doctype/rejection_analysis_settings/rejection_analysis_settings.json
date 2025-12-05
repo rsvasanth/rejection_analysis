@@ -1,0 +1,62 @@
+{
+    "actions": [],
+    "creation": "2025-12-04 15:11:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "sales_site_configuration_section",
+        "sales_site_url",
+        "sales_site_api_key",
+        "sales_site_api_secret"
+    ],
+    "fields": [
+        {
+            "fieldname": "sales_site_configuration_section",
+            "fieldtype": "Section Break",
+            "label": "Sales Site Configuration"
+        },
+        {
+            "description": "URL of the Sales site for fetching item pricing (e.g., https://2526spp.frappe.cloud)",
+            "fieldname": "sales_site_url",
+            "fieldtype": "Data",
+            "label": "Sales Site URL"
+        },
+        {
+            "description": "API Key for authenticating with the Sales site",
+            "fieldname": "sales_site_api_key",
+            "fieldtype": "Data",
+            "label": "Sales Site API Key"
+        },
+        {
+            "description": "API Secret for authenticating with the Sales site",
+            "fieldname": "sales_site_api_secret",
+            "fieldtype": "Password",
+            "label": "Sales Site API Secret"
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "issingle": 1,
+    "links": [],
+    "modified": "2025-12-04 15:11:00.000000",
+    "modified_by": "Administrator",
+    "module": "Rejection Analysis",
+    "name": "Rejection Analysis Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}
