@@ -719,6 +719,31 @@ def get_lot_inspection_report(filters=None):
     
     date = filters.get("production_date", today())
     
+    # STEP 1.5: FETCH WORK PLANNING LOTS FIRST (OEE dashboard pattern)
+    # This avoids Cartesian product by doing TWO separate queries
+    work_plan_query = """
+        SELECT DISTINCT wpi.lot_number
+        FROM `tabWork Planning` wp
+        INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
+        WHERE wp.date = %s
+        AND wp.docstatus = 1
+        AND wpi.lot_number IS NOT NULL
+        AND wpi.lot_number != ''
+        
+        UNION
+        
+        SELECT DISTINCT awpi.lot_number
+        FROM `tabAdd On Work Planning` awp
+        INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
+        WHERE awp.date = %s
+        AND awp.docstatus = 1
+        AND awpi.lot_number IS NOT NULL
+        AND awpi.lot_number != ''
+    """
+    
+    work_plan_lots = frappe.db.sql(work_plan_query, (date, date), as_dict=False)
+    work_plan_lot_numbers = [lot[0] for lot in work_plan_lots] if work_plan_lots else []
+    
     # STEP 2: Build SQL query
     # KEY PRINCIPLE: Start with Moulding Production Entry (MPE) as source of truth
     query = """
@@ -797,14 +822,31 @@ def get_lot_inspection_report(filters=None):
             AND docstatus = 1
             GROUP BY lot_no
         ) line ON line.lot_no = ie.lot_no
-        
-        WHERE ie.inspection_type = 'Lot Inspection'
-        AND ie.docstatus = 1
-        AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
     """
     
+    # STEP 2.5: Build WHERE clause based on Work Planning lots
+    if work_plan_lot_numbers:
+        # We have Work Planning lots - use IN clause OR moulding_date fallback
+        lot_list_str = "'" + "','".join(work_plan_lot_numbers) + "'"
+        query += f"""
+            WHERE ie.inspection_type = 'Lot Inspection'
+            AND ie.docstatus = 1
+            AND (
+                ie.lot_no IN ({lot_list_str})
+                OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            )
+        """
+        params = [date]
+    else:
+        # No Work Planning lots - use only moulding_date
+        query += """
+            WHERE ie.inspection_type = 'Lot Inspection'
+            AND ie.docstatus = 1
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+        """
+        params = [date]
+    
     # STEP 3: Apply additional filters dynamically
-    params = [date]
     conditions = []
     
     if filters.get("operator_name"):
