@@ -798,27 +798,29 @@ def get_lot_inspection_report(filters=None):
             GROUP BY lot_no
         ) line ON line.lot_no = ie.lot_no
         
+        -- LEFT JOIN to Work Planning lots (for date filtering)
+        LEFT JOIN (
+            -- Get all planned lots for the date
+            SELECT DISTINCT wpi.lot_number
+            FROM `tabWork Planning` wp
+            INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
+            WHERE wp.date = %s
+            AND wp.docstatus = 1
+            
+            UNION
+            
+            SELECT DISTINCT awpi.lot_number
+            FROM `tabAdd On Work Planning` awp
+            INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
+            WHERE awp.date = %s
+            AND awp.docstatus = 1
+        ) planned_lots ON planned_lots.lot_number = ie.lot_no
+        
         WHERE ie.inspection_type = 'Lot Inspection'
         AND ie.docstatus = 1
         AND (
-            -- Primary: Include lots from Work Planning (handles Shift 3 submitted next day)
-            ie.lot_no IN (
-                -- Regular Work Planning
-                SELECT wpi.lot_number
-                FROM `tabWork Planning` wp
-                INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
-                WHERE wp.date = %s
-                AND wp.docstatus = 1
-                
-                UNION
-                
-                -- Add On Work Planning
-                SELECT awpi.lot_number
-                FROM `tabAdd On Work Planning` awp
-                INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
-                WHERE awp.date = %s
-                AND awp.docstatus = 1
-            )
+            -- Primary: Lot is in Work Planning (handles Shift 3 submitted next day)
+            planned_lots.lot_number IS NOT NULL
             -- Fallback: Include unplanned lots with matching moulding_date
             OR DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
         )
