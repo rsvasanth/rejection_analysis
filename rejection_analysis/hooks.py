@@ -243,4 +243,11 @@ app_license = "mit"
 # }
 
 
+# Database Migrations
+# --------------------
+# Run patches after migrate
+after_migrate = [
+    "rejection_analysis.patches.add_work_planning_indexes.execute"
+]
+
 website_route_rules = [{'from_route': '/rejection_analysis_console/<path:app_path>', 'to_route': 'rejection_analysis_console'},]
