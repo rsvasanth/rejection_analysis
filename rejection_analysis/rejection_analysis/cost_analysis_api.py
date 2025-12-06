@@ -1,10 +1,6 @@
 """
-Cost Analysis API
-Tracks costs across 4 inspection stages:
-1. Moulding (Production)
-2. Lot Rejection
-3. Incoming Inspection (DF Vendor - Cutmark, RBS, Impression)
-4. Final Inspection (FVI - Over Trim, Under Fill)
+Cost Analysis API - Phase 1
+Simple implementation: Work Planning → MPE Production Data
 """
 
 import frappe
@@ -13,9 +9,13 @@ from frappe.utils import flt, today
 
 
 @frappe.whitelist()
-def get_cost_analysis_data(filters=None):
+def get_production_data_phase1(filters=None):
     """
-    Main API endpoint for Cost Analysis
+    Phase 1: Get production data based on Work Planning lots
+    
+    Flow:
+    1. Get lot numbers from Work Planning + Add On Work Planning (by date range)
+    2. Get MPE data for those lot numbers
     
     Args:
         filters (dict):
@@ -23,155 +23,100 @@ def get_cost_analysis_data(filters=None):
             - to_date: End date (default: today)
             
     Returns:
-        dict: Cost analysis data by stage
+        dict: Production data with lot numbers and quantities
     """
     
     if not filters:
         filters = {}
     
-    # Default date range: April 1, 2025 to today
+    # Default date range
     from_date = filters.get("from_date", "2025-04-01")
     to_date = filters.get("to_date", today())
     
-    # Stage 1: Moulding Production
-    moulding_data = get_moulding_production(from_date, to_date)
+    # Step 1: Get lot numbers from Work Planning
+    work_planning_lots = get_work_planning_lots(from_date, to_date)
     
-    # Stage 2: Lot Rejection
-    lot_rejection_data = get_lot_rejection(from_date, to_date)
+    if not work_planning_lots:
+        return {
+            "success": True,
+            "from_date": from_date,
+            "to_date": to_date,
+            "message": "No Work Planning found for this date range",
+            "production_data": []
+        }
     
-    # Stage 3: Incoming Inspection (DF Vendor with specific defects)
-    incoming_data = get_incoming_inspection_with_defects(from_date, to_date)
+    # Step 2: Get MPE data for those lot numbers
+    production_data = get_mpe_for_lots(work_planning_lots)
     
-    # Stage 4: Final Inspection (FVI with Over Trim, Under Fill)
-    fvi_data = get_fvi_inspection_with_defects(from_date, to_date)
-    
-    result = {
+    return {
         "success": True,
         "from_date": from_date,
         "to_date": to_date,
-        "stages": {
-            "moulding": moulding_data,
-            "lot_rejection": lot_rejection_data,
-            "incoming_inspection": incoming_data,
-            "final_inspection": fvi_data
-        }
+        "total_lots": len(work_planning_lots),
+        "production_entries": len(production_data),
+        "production_data": production_data
     }
-    
-    return result
 
 
-def get_moulding_production(from_date, to_date):
+def get_work_planning_lots(from_date, to_date):
     """
-    Stage 1: Moulding Production Quantities
+    Get lot numbers from Work Planning and Add On Work Planning
     """
     query = """
+        SELECT DISTINCT wpi.lot_number, wp.date as planned_date, wp.shift_type
+        FROM `tabWork Planning` wp
+        INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
+        WHERE wp.date BETWEEN %s AND %s
+        AND wp.docstatus = 1
+        AND wpi.lot_number IS NOT NULL
+        AND wpi.lot_number != ''
+        
+        UNION
+        
+        SELECT DISTINCT awpi.lot_number, awp.date as planned_date, awp.shift_type
+        FROM `tabAdd On Work Planning` awp
+        INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
+        WHERE awp.date BETWEEN %s AND %s
+        AND awp.docstatus = 1
+        AND awpi.lot_number IS NOT NULL
+        AND awpi.lot_number != ''
+        
+        ORDER BY planned_date DESC
+    """
+    
+    return frappe.db.sql(query, (from_date, to_date, from_date, to_date), as_dict=True)
+
+
+def get_mpe_for_lots(lot_list):
+    """
+    Get Moulding Production Entry data for specific lot numbers
+    """
+    # Extract just the lot numbers
+    lot_numbers = [lot['lot_number'] for lot in lot_list]
+    
+    if not lot_numbers:
+        return []
+    
+    # Build IN clause
+    lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
+    
+    query = f"""
         SELECT 
-            DATE(mpe.moulding_date) as date,
+            mpe.name as mpe_name,
+            mpe.scan_lot_number as lot_no,
+            DATE(mpe.moulding_date) as moulding_date,
             mpe.item_to_produce as item_code,
-            SUM(mpe.number_of_lifts) as production_qty_nos,
-            COUNT(DISTINCT mpe.scan_lot_number) as total_lots,
-            SUM(mpe.weight) as total_weight_kg
+            mpe.number_of_lifts as production_qty_nos,
+            mpe.weight as weight_kg,
+            mpe.no_of_running_cavities as cavities,
+            (mpe.number_of_lifts * mpe.no_of_running_cavities) as total_pieces,
+            mpe.employee_name as operator_name,
+            jc.workstation as machine_name
         FROM `tabMoulding Production Entry` mpe
-        WHERE mpe.docstatus = 1
-        AND DATE(mpe.moulding_date) BETWEEN %s AND %s
-        GROUP BY DATE(mpe.moulding_date), mpe.item_to_produce
-        ORDER BY DATE(mpe.moulding_date) DESC
+        LEFT JOIN `tabJob Card` jc ON mpe.job_card = jc.name
+        WHERE mpe.scan_lot_number IN ({lot_numbers_str})
+        AND mpe.docstatus = 1
+        ORDER BY mpe.moulding_date DESC, mpe.scan_lot_number
     """
     
-    return frappe.db.sql(query, (from_date, to_date), as_dict=True)
-
-
-def get_lot_rejection(from_date, to_date):
-    """
-    Stage 2: Lot Rejection (Overall rejection %)
-    """
-    query = """
-        SELECT 
-            ie.posting_date as date,
-            ie.product_ref_no as item_code,
-            ie.lot_no,
-            ie.inspected_qty_nos as inspected_qty,
-            ie.total_rejected_qty as rejected_qty,
-            ie.total_rejected_qty_in_percentage as rejection_pct
-        FROM `tabInspection Entry` ie
-        WHERE ie.inspection_type = 'Lot Inspection'
-        AND ie.docstatus = 1
-        AND ie.posting_date BETWEEN %s AND %s
-        ORDER BY ie.posting_date DESC
-    """
-    
-    return frappe.db.sql(query, (from_date, to_date), as_dict=True)
-
-
-def get_incoming_inspection_with_defects(from_date, to_date):
-    """
-    Stage 3: Incoming Inspection (DF Vendor)
-    Tracks specific defects: Cutmark, RBS Rejection, IMPRESSION MARK
-    """
-    query = """
-        SELECT 
-            ie.posting_date as date,
-            ie.product_ref_no as item_code,
-            ie.lot_no,
-            ie.inspected_qty_nos as inspected_qty,
-            ie.total_rejected_qty as total_rejected_qty,
-            ie.total_rejected_qty_in_percentage as rejection_pct,
-            ie.supplier,
-            (SELECT SUM(iei.rejected_qty) 
-             FROM `tabInspection Entry Item` iei 
-             WHERE iei.parent = ie.name 
-             AND iei.rejection_reason IN ('Cutmark', 'CUTMARK', 'Cut Mark')
-            ) as cutmark_qty,
-            (SELECT SUM(iei.rejected_qty) 
-             FROM `tabInspection Entry Item` iei 
-             WHERE iei.parent = ie.name 
-             AND iei.rejection_reason IN ('RBS Rejection', 'RBS', 'Rbs Rejection')
-            ) as rbs_rejection_qty,
-            (SELECT SUM(iei.rejected_qty) 
-             FROM `tabInspection Entry Item` iei 
-             WHERE iei.parent = ie.name 
-             AND iei.rejection_reason IN ('IMPRESSION MARK', 'Impression Mark')
-            ) as impression_mark_qty
-        FROM `tabInspection Entry` ie
-        WHERE ie.inspection_type = 'Incoming Inspection'
-        AND ie.docstatus = 1
-        AND ie.posting_date BETWEEN %s AND %s
-        ORDER BY ie.posting_date DESC
-    """
-    
-    return frappe.db.sql(query, (from_date, to_date), as_dict=True)
-
-
-def get_fvi_inspection_with_defects(from_date, to_date):
-    """
-    Stage 4: Final Inspection (FVI)
-    Tracks defects: Over Trim, Under Fill (UF)
-    Also tracks Trimming Rejection %
-    """
-    query = """
-        SELECT 
-            se.posting_date as date,
-            se.item_code,
-            se.lot_no,
-            se.inspected_qty,
-            se.rejected_qty as total_rejected_qty,
-            se.rejection_percentage,
-            (SELECT SUM(sei.rejected_qty)
-             FROM `tabSpp Inspection Entry Item` sei
-             WHERE sei.parent = se.name
-             AND sei.rejection_reason IN ('Over Trim', 'OVER TRIM', 'Overtrim')
-            ) as over_trim_qty,
-            (SELECT SUM(sei.rejected_qty)
-             FROM `tabSpp Inspection Entry Item` sei
-             WHERE sei.parent = se.name
-             AND sei.rejection_reason IN ('Under Fill', 'UNDER FILL', 'UF')
-            ) as under_fill_qty,
-            se.trimming_rejection_pct
-        FROM `tabSpp Inspection Entry` se
-        WHERE se.inspection_type = 'FVI'
-        AND se.docstatus = 1
-        AND se.posting_date BETWEEN %s AND %s
-        ORDER BY se.posting_date DESC
-    """
-    
-    return frappe.db.sql(query, (from_date, to_date), as_dict=True)
+    return frappe.db.sql(query, as_dict=True)
