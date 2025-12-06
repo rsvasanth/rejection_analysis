@@ -15,7 +15,7 @@ def get_production_data_phase1(filters=None):
     
     Flow:
     1. Get lot numbers from Work Planning + Add On Work Planning (by date range)
-    2. Get MPE data for those lot numbers
+    2. Get MPE data for those lot numbers with Work Plan reference
     
     Args:
         filters (dict):
@@ -33,7 +33,7 @@ def get_production_data_phase1(filters=None):
     from_date = filters.get("from_date", "2025-04-01")
     to_date = filters.get("to_date", today())
     
-    # Step 1: Get lot numbers from Work Planning
+    # Step 1: Get lot numbers from Work Planning with plan details
     work_planning_lots = get_work_planning_lots(from_date, to_date)
     
     if not work_planning_lots:
@@ -45,7 +45,7 @@ def get_production_data_phase1(filters=None):
             "production_data": []
         }
     
-    # Step 2: Get MPE data for those lot numbers
+    # Step 2: Get MPE data for those lot numbers with work plan info
     production_data = get_mpe_for_lots(work_planning_lots)
     
     return {
@@ -63,7 +63,12 @@ def get_work_planning_lots(from_date, to_date):
     Get lot numbers from Work Planning and Add On Work Planning
     """
     query = """
-        SELECT DISTINCT wpi.lot_number, wp.date as planned_date, wp.shift_type
+        SELECT DISTINCT 
+            wpi.lot_number, 
+            wp.name as work_plan,
+            wp.date as planned_date, 
+            wp.shift_type,
+            'Work Planning' as source
         FROM `tabWork Planning` wp
         INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
         WHERE wp.date BETWEEN %s AND %s
@@ -73,7 +78,12 @@ def get_work_planning_lots(from_date, to_date):
         
         UNION
         
-        SELECT DISTINCT awpi.lot_number, awp.date as planned_date, awp.shift_type
+        SELECT DISTINCT 
+            awpi.lot_number, 
+            awp.name as work_plan,
+            awp.date as planned_date, 
+            awp.shift_type,
+            'Add On Work Planning' as source
         FROM `tabAdd On Work Planning` awp
         INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
         WHERE awp.date BETWEEN %s AND %s
@@ -90,7 +100,11 @@ def get_work_planning_lots(from_date, to_date):
 def get_mpe_for_lots(lot_list):
     """
     Get Moulding Production Entry data for specific lot numbers
+    Merge with Work Plan information
     """
+    # Create lookup dict for work plan info by lot number
+    lot_plan_map = {lot['lot_number']: lot for lot in lot_list}
+    
     # Extract just the lot numbers
     lot_numbers = [lot['lot_number'] for lot in lot_list]
     
@@ -119,4 +133,18 @@ def get_mpe_for_lots(lot_list):
         ORDER BY mpe.moulding_date DESC, mpe.scan_lot_number
     """
     
-    return frappe.db.sql(query, as_dict=True)
+    mpe_data = frappe.db.sql(query, as_dict=True)
+    
+    # Merge work plan info with MPE data
+    for row in mpe_data:
+        lot_no = row['lot_no']
+        if lot_no in lot_plan_map:
+            row['work_plan'] = lot_plan_map[lot_no]['work_plan']
+            row['planned_date'] = lot_plan_map[lot_no]['planned_date']
+            row['plan_source'] = lot_plan_map[lot_no]['source']
+        else:
+            row['work_plan'] = None
+            row['planned_date'] = None
+            row['plan_source'] = None
+    
+    return mpe_data

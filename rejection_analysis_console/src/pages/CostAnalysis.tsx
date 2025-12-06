@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils'
 interface ProductionData {
     mpe_name: string
     lot_no: string
+    work_plan: string
+    planned_date: string
     moulding_date: string
     item_code: string
     production_qty_nos: number
@@ -23,6 +25,7 @@ interface ProductionData {
     total_pieces: number
     operator_name: string
     machine_name: string
+    plan_source: string
 }
 
 function CostAnalysisPage() {
@@ -143,11 +146,13 @@ function CostAnalysisPage() {
                                 No production data found. Click "Load Data" to fetch.
                             </div>
                         ) : (
-                            <div className="rounded-md border">
+                            <div className="rounded-md border overflow-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Lot No</TableHead>
+                                            <TableHead>Work Plan</TableHead>
+                                            <TableHead>Planned Date</TableHead>
                                             <TableHead>Moulding Date</TableHead>
                                             <TableHead>Item Code</TableHead>
                                             <TableHead className="text-right">Qty (Nos)</TableHead>
@@ -161,6 +166,10 @@ function CostAnalysisPage() {
                                         {productionData.map((row) => (
                                             <TableRow key={row.mpe_name}>
                                                 <TableCell className="font-medium">{row.lot_no}</TableCell>
+                                                <TableCell className="text-xs">{row.work_plan || '-'}</TableCell>
+                                                <TableCell>
+                                                    {row.planned_date ? format(new Date(row.planned_date), 'dd-MMM-yyyy') : '-'}
+                                                </TableCell>
                                                 <TableCell>{format(new Date(row.moulding_date), 'dd-MMM-yyyy')}</TableCell>
                                                 <TableCell>{row.item_code}</TableCell>
                                                 <TableCell className="text-right">{row.production_qty_nos}</TableCell>
