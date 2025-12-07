@@ -62,21 +62,21 @@ function MetricCard({
 }) {
     return (
         <Card className="overflow-hidden transition-all hover:shadow-md">
-            <CardContent className="p-1.5">
-                <div className="flex items-center justify-between space-x-1.5">
+            <CardContent className="p-1">
+                <div className="flex items-center justify-between space-x-1">
                     <div className="flex-1">
-                        <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+                        <p className="text-[10px] font-medium text-muted-foreground">{label}</p>
                         {loading ? (
-                            <Skeleton className="h-5 w-16 mt-0.5" />
+                            <Skeleton className="h-4 w-14 mt-0.5" />
                         ) : (
-                            <p className="text-xl font-bold mt-0.5 tracking-tight">
+                            <p className="text-lg font-bold mt-0.5 tracking-tight">
                                 {value !== null && value !== undefined ? value : '—'}
                             </p>
                         )}
                     </div>
                     {Icon && (
-                        <div className="rounded-lg p-1.5 bg-primary/10">
-                            <Icon className="h-4 w-4 text-primary" />
+                        <div className="rounded-lg p-1 bg-primary/10">
+                            <Icon className="h-3 w-3 text-primary" />
                         </div>
                     )}
                 </div>
@@ -160,7 +160,7 @@ function CostAnalysisPage() {
             row.machine_name || ''
         ])
 
-        const csvContent = [headers, ...rows].map(row => row.join(',')).join('\\n')
+        const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n')
         const blob = new Blob([csvContent], { type: 'text/csv' })
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -261,7 +261,7 @@ function CostAnalysisPage() {
                             Analysis
                         </TabsTrigger>
                         <TabsTrigger value="moulding" className="gap-2">
-                            <Package className="h-4 w-4" />
+                            <Package className="h-3 w-3" />
                             Moulding
                         </TabsTrigger>
                         <TabsTrigger value="lot_rejection" className="gap-2">
@@ -282,104 +282,104 @@ function CostAnalysisPage() {
                     <TabsContent value="analysis" className="space-y-4">
                         {/* Summary Cards */}
                         <div className="grid grid-cols-4 gap-4">
-                            <Card className="border-l-4 border-green-500">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm flex items-center gap-2">
+                            <Card className="border-l-4 border-primary">
+                                <CardHeader className="pb-1 pt-2 px-3">
+                                    <CardTitle className="text-xs flex items-center gap-2">
                                         <Package className="h-4 w-4" />
                                         Moulding Production
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
+                                <CardContent className="pb-2 pt-1 px-3">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Total Lots</span>
                                             <span className="font-bold">{summary.total_lots}</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Quantity</span>
                                             <span className="font-bold">{summary.total_qty.toLocaleString()}</span>
                                         </div>
-                                        <div className="pt-2 border-t">
-                                            <p className="text-xs text-muted-foreground">Production Value</p>
-                                            <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.total_value)}</p>
+                                        <div className="pt-1 border-t">
+                                            <p className="text-[10px] text-muted-foreground">Production Value</p>
+                                            <p className="text-lg font-bold text-primary">{formatCurrency(summary.total_value)}</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <Card className="border-l-4 border-orange-500">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm flex items-center gap-2">
-                                        <AlertCircle className="h-4 w-4" />
+                                <CardHeader className="pb-1 pt-2 px-3">
+                                    <CardTitle className="text-xs flex items-center gap-2">
+                                        <AlertCircle className="h-3 w-3" />
                                         Lot Rejection
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
+                                <CardContent className="pb-2 pt-1 px-3">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Rejection %</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Rejected Qty</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="pt-2 border-t">
-                                            <p className="text-xs text-muted-foreground">Rejection Cost</p>
-                                            <p className="text-2xl font-bold text-orange-600">₹0</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Phase 2</p>
+                                        <div className="pt-1 border-t">
+                                            <p className="text-[10px] text-muted-foreground">Rejection Cost</p>
+                                            <p className="text-lg font-bold text-orange-600">₹0</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Phase 2</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-l-4 border-amber-500">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm flex items-center gap-2">
-                                        <TrendingDown className="h-4 w-4" />
+                            <Card className="border-l-4 border-yellow-500">
+                                <CardHeader className="pb-1 pt-2 px-3">
+                                    <CardTitle className="text-xs flex items-center gap-2">
+                                        <TrendingDown className="h-3 w-3" />
                                         Incoming Inspection
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
+                                <CardContent className="pb-2 pt-1 px-3">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Cutmark</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">RBS/Impression</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="pt-2 border-t">
-                                            <p className="text-xs text-muted-foreground">DF Vendor Cost</p>
-                                            <p className="text-2xl font-bold text-amber-600">₹0</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Phase 3</p>
+                                        <div className="pt-1 border-t">
+                                            <p className="text-[10px] text-muted-foreground">DF Vendor Cost</p>
+                                            <p className="text-lg font-bold text-yellow-600">₹0</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Phase 3</p>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="border-l-4 border-red-500">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4" />
+                            <Card className="border-l-4 border-destructive">
+                                <CardHeader className="pb-1 pt-2 px-3">
+                                    <CardTitle className="text-xs flex items-center gap-2">
+                                        <TrendingUp className="h-3 w-3" />
                                         Final Inspection
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
+                                <CardContent className="pb-2 pt-1 px-3">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Over Trim</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Under Fill</span>
                                             <span className="font-bold">-</span>
                                         </div>
-                                        <div className="pt-2 border-t">
-                                            <p className="text-xs text-muted-foreground">FVI Cost</p>
-                                            <p className="text-2xl font-bold text-red-600">₹0</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Phase 4</p>
+                                        <div className="pt-1 border-t">
+                                            <p className="text-[10px] text-muted-foreground">FVI Cost</p>
+                                            <p className="text-lg font-bold text-destructive">₹0</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">Phase 4</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -387,7 +387,7 @@ function CostAnalysisPage() {
                         </div>
 
                         {/* Overall Summary */}
-                        <Card className="bg-gradient-to-r from-blue-50 to-purple-50">
+                        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <BarChart3 className="h-5 w-5" />
@@ -398,16 +398,16 @@ function CostAnalysisPage() {
                                 <div className="grid grid-cols-4 gap-6">
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Production Value</p>
-                                        <p className="text-3xl font-bold text-green-600">{formatCurrency(summary.total_value)}</p>
+                                        <p className="text-3xl font-bold text-primary">{formatCurrency(summary.total_value)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Total Rejection Cost</p>
-                                        <p className="text-3xl font-bold text-red-600">₹0</p>
+                                        <p className="text-3xl font-bold text-destructive">₹0</p>
                                         <p className="text-xs text-muted-foreground">Phases 2-4</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Net Value</p>
-                                        <p className="text-3xl font-bold text-blue-600">{formatCurrency(summary.total_value)}</p>
+                                        <p className="text-3xl font-bold">{formatCurrency(summary.total_value)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Cost of Poor Quality</p>
@@ -417,7 +417,6 @@ function CostAnalysisPage() {
                                 </div>
                             </CardContent>
                         </Card>
-
                         {/* Info Card */}
                         <Card>
                             <CardContent className="py-6">
@@ -429,20 +428,20 @@ function CostAnalysisPage() {
                                         this will show detailed charts and trends for rejection costs across all inspection stages.
                                     </p>
                                     <div className="grid grid-cols-4 gap-4 text-left mt-6">
-                                        <div className="p-3 bg-green-50 rounded-lg">
-                                            <p className="text-xs font-semibold text-green-700">✓ Phase 1: Moulding</p>
+                                        <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                                            <p className="text-xs font-semibold text-primary">✓ Phase 1: Moulding</p>
                                             <p className="text-xs text-muted-foreground mt-1">Production value tracking</p>
                                         </div>
-                                        <div className="p-3 bg-orange-50 rounded-lg">
-                                            <p className="text-xs font-semibold text-orange-700">⏳ Phase 2: Lot Rejection</p>
+                                        <div className="p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                                            <p className="text-xs font-semibold text-orange-700 dark:text-orange-400">⏳ Phase 2: Lot Rejection</p>
                                             <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
                                         </div>
-                                        <div className="p-3 bg-amber-50 rounded-lg">
-                                            <p className="text-xs font-semibold text-amber-700">⏳ Phase 3: Incoming</p>
+                                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                            <p className="text-xs font-semibold text-yellow-700 dark:text-yellow-400">⏳ Phase 3: Incoming</p>
                                             <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
                                         </div>
-                                        <div className="p-3 bg-red-50 rounded-lg">
-                                            <p className="text-xs font-semibold text-red-700">⏳ Phase 4: FVI</p>
+                                        <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                                            <p className="text-xs font-semibold text-destructive">⏳ Phase 4: FVI</p>
                                             <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
                                         </div>
                                     </div>
