@@ -27,10 +27,10 @@ def get_remote_pricing_config():
 
 def convert_to_finished_product_code(material_item_code):
     """
-    Convert Material item code to Finished Product code
+    Convert Material/Product item code to Finished Product code for pricing
     Examples:
     - T2438 → F2438 (Material to Finished)
-    - P6117 → P6117 (Product code, already finished)
+    - P6117 → F6117 (Product to Finished - same pricing)
     - F2438 → F2438 (Already finished product code)
     """
     if not material_item_code:
@@ -42,11 +42,12 @@ def convert_to_finished_product_code(material_item_code):
     # Check prefix
     first_char = cleaned[0].upper() if cleaned else ''
     
-    if first_char == 'T':
-        # Transform T → F (Material to Finished Product)
+    if first_char in ('T', 'P'):
+        # Transform T/P → F (Material/Product to Finished Product)
+        # T2438 → F2438, P6117 → F6117
         return 'F' + cleaned[1:]
-    elif first_char in ('P', 'F'):
-        # P-codes and F-codes are already finished product codes
+    elif first_char == 'F':
+        # Already finished product code
         return cleaned.upper()
     
     return None
@@ -491,6 +492,16 @@ def get_incoming_inspection_data(lot_numbers):
         material_code = row.get('item_code')
         finished_code = t_to_f_map.get(material_code)
         rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        
+        # Fallback to local Item Price if remote pricing returns 0
+        if rate == 0 and material_code:
+            local_price = frappe.db.get_value(
+                'Item Price',
+                {'item_code': material_code, 'price_list': 'Standard Selling'},
+                'price_list_rate'
+            )
+            rate = flt(local_price) if local_price else 0
+        
         row['item_rate'] = rate
         
         # Calculate DF Vendor Cost = Production Qty × C/M/RR % × Rate
@@ -548,7 +559,7 @@ def get_fvi_data(lot_numbers):
             sie.inspected_qty_nos as inspected_qty,
             sie.total_rejected_qty as rejected_qty,
             sie.total_rejected_qty_in_percentage as rejection_pct
-        FROM `tabSpp Inspection Entry` sie
+        FROM `tabSPP Inspection Entry` sie
         WHERE sie.lot_no IN ({lot_numbers_str})
         AND sie.inspection_type = 'FVI'
         AND sie.docstatus = 1
