@@ -336,19 +336,19 @@ def get_incoming_defects(inspection_entry):
     
     query = """
         SELECT 
-            rejection_reason,
+            type_of_defect,
             SUM(rejected_qty) as qty
         FROM `tabInspection Entry Item`
         WHERE parent = %s
-        AND rejection_reason IN ('Cutmark', 'RBS Rejection', 'IMPRESSION MARK')
-        GROUP BY rejection_reason
+        AND type_of_defect IN ('Cutmark', 'RBS Rejection', 'IMPRESSION MARK')
+        GROUP BY type_of_defect
     """
     
     defects_data = frappe.db.sql(query, (inspection_entry,), as_dict=True)
     
     defects = {}
     for row in defects_data:
-        reason = row['rejection_reason']
+        reason = row['type_of_defect']
         if reason == 'Cutmark':
             defects['cutmark'] = flt(row['qty'], 2)
         elif reason == 'RBS Rejection':
@@ -417,19 +417,19 @@ def get_fvi_defects(inspection_entry):
     
     query = """
         SELECT 
-            rejection_reason,
+            type_of_defect,
             SUM(rejected_qty) as qty
         FROM `tabSpp Inspection Entry Item`
         WHERE parent = %s
-        AND rejection_reason IN ('Over Trim', 'Under Fill (UF)')
-        GROUP BY rejection_reason
+        AND type_of_defect IN ('Over Trim', 'Under Fill (UF)')
+        GROUP BY type_of_defect
     """
     
     defects_data = frappe.db.sql(query, (inspection_entry,), as_dict=True)
     
     defects = {}
     for row in defects_data:
-        reason = row['rejection_reason']
+        reason = row['type_of_defect']
         if reason == 'Over Trim':
             defects['over_trim'] = flt(row['qty'], 2)
         elif reason == 'Under Fill (UF)':
