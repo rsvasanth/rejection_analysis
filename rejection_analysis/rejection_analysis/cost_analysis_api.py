@@ -364,13 +364,14 @@ def get_moulding_data(lot_numbers, work_planning_lots):
 
 
 def get_lot_rejection_data(lot_numbers):
-    """Stage 2: Get Lot Inspection rejection data"""
+    """Stage 2: Get Lot Inspection rejection data with remote pricing"""
     
     if not lot_numbers:
         return []
     
     lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
     
+    # Fetch lot rejection data WITHOUT pricing (remove Item Price JOIN)
     query = f"""
         SELECT 
             ie.name as inspection_entry,
@@ -380,10 +381,8 @@ def get_lot_rejection_data(lot_numbers):
             ie.inspected_qty_nos,
             ie.total_rejected_qty,
             ie.total_rejected_qty_in_percentage as rejection_pct,
-            ie.total_rejected_qty_kg as rejected_weight_kg,
-            ip.price_list_rate as item_rate
+            ie.total_rejected_qty_kg as rejected_weight_kg
         FROM `tabInspection Entry` ie
-        LEFT JOIN `tabItem Price` ip ON ie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE ie.lot_no IN ({lot_numbers_str})
         AND ie.inspection_type = 'Lot Inspection'
         AND ie.docstatus = 1
@@ -392,24 +391,48 @@ def get_lot_rejection_data(lot_numbers):
     
     lot_data = frappe.db.sql(query, as_dict=True)
     
+    # Collect unique Material item codes and convert to Finished Product codes
+    material_items = set()
+    finished_items = []
+    t_to_f_map = {}
+    
     for row in lot_data:
-        # Calculate Lot Rejection Cost
+        material_code = row.get('item_code')
+        if material_code:
+            material_items.add(material_code)
+            finished_code = convert_to_finished_product_code(material_code)
+            if finished_code:
+                finished_items.append(finished_code)
+                t_to_f_map[material_code] = finished_code
+    
+    # Fetch remote pricing for Finished Product codes
+    pricing_map = fetch_remote_item_prices(finished_items)
+    
+    # Map pricing back to Material codes and calculate costs
+    for row in lot_data:
+        material_code = row.get('item_code')
+        
+        # Get rate from remote pricing
+        finished_code = t_to_f_map.get(material_code)
+        rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        row['item_rate'] = rate
+        
+        # Calculate Lot Rejection Cost = Rejected Qty × Rate
         rejected_qty = flt(row.get('total_rejected_qty', 0))
-        rate = flt(row.get('item_rate', 0))
         row['rejection_cost'] = rejected_qty * rate
     
     return lot_data
 
 
 def get_incoming_inspection_data(lot_numbers):
-    """Stage 3: Get Incoming Inspection data with defect breakdown"""
+    """Stage 3: Get Incoming Inspection data with defect breakdown and remote pricing"""
     
     if not lot_numbers:
         return []
     
     lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
     
-    # Main query for incoming inspection
+    # Main query for incoming inspection WITHOUT pricing
     query = f"""
         SELECT 
             ie.name as inspection_entry,
@@ -418,10 +441,8 @@ def get_incoming_inspection_data(lot_numbers):
             ie.product_ref_no as item_code,
             ie.inspected_qty_nos,
             ie.total_rejected_qty,
-            ie.total_rejected_qty_in_percentage as rejection_pct,
-            ip.price_list_rate as item_rate
+            ie.total_rejected_qty_in_percentage as rejection_pct
         FROM `tabInspection Entry` ie
-        LEFT JOIN `tabItem Price` ip ON ie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE ie.lot_no IN ({lot_numbers_str})
         AND ie.inspection_type = 'Incoming Inspection'
         AND ie.docstatus = 1
@@ -430,7 +451,24 @@ def get_incoming_inspection_data(lot_numbers):
     
     incoming_data = frappe.db.sql(query, as_dict=True)
     
-    # Get defect details for each record
+    # Collect unique Material item codes and convert to Finished Product codes
+    material_items = set()
+    finished_items = []
+    t_to_f_map = {}
+    
+    for row in incoming_data:
+        material_code = row.get('item_code')
+        if material_code:
+            material_items.add(material_code)
+            finished_code = convert_to_finished_product_code(material_code)
+            if finished_code:
+                finished_items.append(finished_code)
+                t_to_f_map[material_code] = finished_code
+    
+    # Fetch remote pricing for Finished Product codes
+    pricing_map = fetch_remote_item_prices(finished_items)
+    
+    # Get defect details and calculate costs for each record
     for row in incoming_data:
         defects = get_incoming_defects(row['inspection_entry'])
         row['cutmark_qty'] = defects.get('cutmark', 0)
@@ -441,10 +479,14 @@ def get_incoming_inspection_data(lot_numbers):
         cmrr_pct = (row['cutmark_qty'] + row['rbs_rejection_qty']) / 200.0
         row['cmrr_pct'] = cmrr_pct
         
+        # Get rate from remote pricing
+        material_code = row.get('item_code')
+        finished_code = t_to_f_map.get(material_code)
+        rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        row['item_rate'] = rate
+        
         # Calculate DF Vendor Cost = Production Qty × C/M/RR % × Rate
-        # Note: Using inspected_qty as proxy for production qty
         inspected_qty = flt(row.get('inspected_qty_nos', 0))
-        rate = flt(row.get('item_rate', 0))
         row['df_vendor_cost'] = inspected_qty * cmrr_pct * rate
         
         # Also calculate total rejection cost
@@ -483,13 +525,14 @@ def get_incoming_defects(inspection_entry):
 
 
 def get_fvi_data(lot_numbers):
-    """Stage 4: Get Final Inspection (FVI) data with defect breakdown"""
+    """Stage 4: Get Final Inspection (FVI) data with defect breakdown and remote pricing"""
     
     if not lot_numbers:
         return []
     
     lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
     
+    # Fetch FVI data WITHOUT pricing
     query = f"""
         SELECT 
             sie.name as inspection_entry,
@@ -498,10 +541,8 @@ def get_fvi_data(lot_numbers):
             sie.product_ref_no as item_code,
             sie.inspected_qty_nos as inspected_qty,
             sie.total_rejected_qty as rejected_qty,
-            sie.total_rejected_qty_in_percentage as rejection_pct,
-            ip.price_list_rate as item_rate
+            sie.total_rejected_qty_in_percentage as rejection_pct
         FROM `tabSpp Inspection Entry` sie
-        LEFT JOIN `tabItem Price` ip ON sie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE sie.lot_no IN ({lot_numbers_str})
         AND sie.inspection_type = 'FVI'
         AND sie.docstatus = 1
@@ -510,32 +551,45 @@ def get_fvi_data(lot_numbers):
     
     fvi_data = frappe.db.sql(query, as_dict=True)
     
-    # Get defect details
+    # Collect unique Material item codes and convert to Finished Product codes
+    material_items = set()
+    finished_items = []
+    t_to_f_map = {}
+    
+    for row in fvi_data:
+        material_code = row.get('item_code')
+        if material_code:
+            material_items.add(material_code)
+            finished_code = convert_to_finished_product_code(material_code)
+            if finished_code:
+                finished_items.append(finished_code)
+                t_to_f_map[material_code] = finished_code
+    
+    # Fetch remote pricing for Finished Product codes
+    pricing_map = fetch_remote_item_prices(finished_items)
+    
+    # Get defect details and calculate costs
     for row in fvi_data:
         defects = get_fvi_defects(row['inspection_entry'])
         row['over_trim_qty'] = defects.get('over_trim', 0)
         row['under_fill_qty'] = defects.get('under_fill', 0)
         
-        # Calculate costs
+        # Get rate from remote pricing
+        material_code = row.get('item_code')
+        finished_code = t_to_f_map.get(material_code)
+        rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        row['item_rate'] = rate
+        
+        # Calculate trimming percentage and cost
         inspected_qty = flt(row.get('inspected_qty', 0))
-        rate = flt(row.get('item_rate', 0))
-        
-        # Since trimming_rejection_pct doesn't exist, calculate from defects
-        # Trimming % = (Over Trim / Inspected Qty) * 100
-        trimming_pct = 0
-        if inspected_qty > 0:
-            trimming_pct = (row['over_trim_qty'] / inspected_qty) * 100
-        row['trimming_rejection_pct'] = trimming_pct
-        
-        # Trimming Rejection Cost = Over Trim Qty × Rate
+        trimming_pct = (row['over_trim_qty'] / inspected_qty * 100) if inspected_qty > 0 else 0
+        row['trimming_pct'] = trimming_pct
         row['trimming_cost'] = row['over_trim_qty'] * rate
         
-        # Final Rejection Cost = Rejected Qty × Rate
+        # Calculate Final Rejection Cost = (Rejected Qty × Rate) + Trimming Cost
         rejected_qty = flt(row.get('rejected_qty', 0))
-        row['fvi_rejection_cost'] = rejected_qty * rate
-        
-        # Total FVI Cost
-        row['total_fvi_cost'] = row['trimming_cost'] + row['fvi_rejection_cost']
+        rejection_cost = rejected_qty * rate
+        row['total_fvi_cost'] = rejection_cost + row['trimming_cost']
     
     return fvi_data
 
