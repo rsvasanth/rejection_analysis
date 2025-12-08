@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react'
+import { useState, useContext, useEffect, useMemo } from 'react'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { SiteHeader } from '@/components/site-header'
 import { Button } from '@/components/ui/button'
@@ -184,41 +184,6 @@ function CostAnalysisPage() {
         fetchData()
     }, [])
 
-    // Sorting function
-    const sortData = <T extends Record<string, any>>(data: T[], key: string, direction: 'asc' | 'desc'): T[] => {
-        return [...data].sort((a, b) => {
-            const aVal = a[key]
-            const bVal = b[key]
-
-            if (aVal === null || aVal === undefined) return 1
-            if (bVal === null || bVal === undefined) return -1
-
-            if (typeof aVal === 'string' && typeof bVal === 'string') {
-                return direction === 'asc'
-                    ? aVal.localeCompare(bVal)
-                    : bVal.localeCompare(aVal)
-            }
-
-            return direction === 'asc'
-                ? (aVal > bVal ? 1 : -1)
-                : (aVal < bVal ? 1 : -1)
-        })
-    }
-
-    // Filter function
-    const filterData = <T extends Record<string, any>>(data: T[]): T[] => {
-        return data.filter(row => {
-            const lotMatch = !filters.lotNo ||
-                row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
-            const itemMatch = !filters.itemCode ||
-                row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
-            const operatorMatch = !filters.operator ||
-                row.operator_name?.toString().toLowerCase().includes(filters.operator.toLowerCase())
-
-            return lotMatch && itemMatch && operatorMatch
-        })
-    }
-
     // Handle sort
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
@@ -233,14 +198,144 @@ function CostAnalysisPage() {
         setFilters(prev => ({ ...prev, [filterKey]: value }))
     }
 
-    // Get processed data (filtered and sorted)
-    const getProcessedData = <T extends Record<string, any>>(data: T[]): T[] => {
-        let processed = filterData(data)
+    // Memoized processed data for each tab - prevents recalculation on tab switch
+    const processedMouldingData = useMemo(() => {
+        let processed = mouldingData.filter(row => {
+            const lotMatch = !filters.lotNo || row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
+            const itemMatch = !filters.itemCode || row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
+            const operatorMatch = !filters.operator || row.operator_name?.toString().toLowerCase().includes(filters.operator.toLowerCase())
+            return lotMatch && itemMatch && operatorMatch
+        })
+
         if (sortConfig) {
-            processed = sortData(processed, sortConfig.key, sortConfig.direction)
+            processed = [...processed].sort((a, b) => {
+                const aVal = a[sortConfig.key as keyof MouldingData]
+                const bVal = b[sortConfig.key as keyof MouldingData]
+                if (aVal === null || aVal === undefined) return 1
+                if (bVal === null || bVal === undefined) return -1
+                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                    return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+                }
+                return sortConfig.direction === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1)
+            })
         }
         return processed
-    }
+    }, [mouldingData, sortConfig, filters])
+
+    const processedLotRejectionData = useMemo(() => {
+        let processed = lotRejectionData.filter(row => {
+            const lotMatch = !filters.lotNo || row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
+            const itemMatch = !filters.itemCode || row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
+            return lotMatch && itemMatch
+        })
+
+        if (sortConfig) {
+            processed = [...processed].sort((a, b) => {
+                const aVal = a[sortConfig.key as keyof LotRejectionData]
+                const bVal = b[sortConfig.key as keyof LotRejectionData]
+                if (aVal === null || aVal === undefined) return 1
+                if (bVal === null || bVal === undefined) return -1
+                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                    return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+                }
+                return sortConfig.direction === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1)
+            })
+        }
+        return processed
+    }, [lotRejectionData, sortConfig, filters])
+
+    const processedIncomingData = useMemo(() => {
+        let processed = incomingData.filter(row => {
+            const lotMatch = !filters.lotNo || row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
+            const itemMatch = !filters.itemCode || row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
+            return lotMatch && itemMatch
+        })
+
+        if (sortConfig) {
+            processed = [...processed].sort((a, b) => {
+                const aVal = a[sortConfig.key as keyof IncomingData]
+                const bVal = b[sortConfig.key as keyof IncomingData]
+                if (aVal === null || aVal === undefined) return 1
+                if (bVal === null || bVal === undefined) return -1
+                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                    return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+                }
+                return sortConfig.direction === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1)
+            })
+        }
+        return processed
+    }, [incomingData, sortConfig, filters])
+
+    const processedFviData = useMemo(() => {
+        let processed = fviData.filter(row => {
+            const lotMatch = !filters.lotNo || row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
+            const itemMatch = !filters.itemCode || row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
+            return lotMatch && itemMatch
+        })
+
+        if (sortConfig) {
+            processed = [...processed].sort((a, b) => {
+                const aVal = a[sortConfig.key as keyof FVIData]
+                const bVal = b[sortConfig.key as keyof FVIData]
+                if (aVal === null || aVal === undefined) return 1
+                if (bVal === null || bVal === undefined) return -1
+                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                    return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+                }
+                return sortConfig.direction === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1)
+            })
+        }
+        return processed
+    }, [fviData, sortConfig, filters])
+
+    // Memoized chart data - expensive calculation
+    const chartData = useMemo(() => {
+        const dateMap = new Map<string, { production_value: number; rejection_cost: number }>()
+
+        mouldingData.forEach(item => {
+            const date = item.moulding_date
+            const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+            dateMap.set(date, {
+                ...current,
+                production_value: current.production_value + (item.production_value || 0)
+            })
+        })
+
+        lotRejectionData.forEach(item => {
+            const date = item.lot_no.substring(0, 10)
+            const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+            dateMap.set(date, {
+                ...current,
+                rejection_cost: current.rejection_cost + (item.rejection_cost || 0)
+            })
+        })
+
+        incomingData.forEach(item => {
+            const date = item.inspection_date
+            const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+            dateMap.set(date, {
+                ...current,
+                rejection_cost: current.rejection_cost + (item.df_vendor_cost || 0)
+            })
+        })
+
+        fviData.forEach(item => {
+            const date = item.inspection_date
+            const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+            dateMap.set(date, {
+                ...current,
+                rejection_cost: current.rejection_cost + (item.total_fvi_cost || 0)
+            })
+        })
+
+        return Array.from(dateMap.entries())
+            .map(([date, values]) => ({
+                date,
+                production_value: values.production_value,
+                rejection_cost: values.rejection_cost
+            }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    }, [mouldingData, lotRejectionData, incomingData, fviData])
 
     const fetchData = async () => {
         setLoading(true)
@@ -890,7 +985,7 @@ function CostAnalysisPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {getProcessedData(mouldingData).map((row) => (
+                                                {processedMouldingData.map((row) => (
                                                     <TableRow key={row.mpe_name}>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
                                                         <TableCell className="text-xs text-muted-foreground">{row.work_plan || '-'}</TableCell>
@@ -989,7 +1084,7 @@ function CostAnalysisPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {getProcessedData(lotRejectionData).map((row) => (
+                                                {processedLotRejectionData.map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
@@ -1088,7 +1183,7 @@ function CostAnalysisPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {getProcessedData(incomingData).map((row) => (
+                                                {processedIncomingData.map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
@@ -1187,7 +1282,7 @@ function CostAnalysisPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {getProcessedData(fviData).map((row) => (
+                                                {processedFviData.map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
