@@ -205,6 +205,44 @@ function CostAnalysisPage() {
         return format(new Date(dateString), 'dd-MMM-yy')
     }
 
+    // Calculate actual date range being queried
+    const getDateRangeDisplay = () => {
+        const date = selectedDate
+
+        switch (period) {
+            case 'daily':
+                return format(date, 'MMM d, yyyy')
+
+            case 'weekly':
+                const weekStart = new Date(date)
+                weekStart.setDate(weekStart.getDate() - 6)
+                return `${format(weekStart, 'MMM d')} - ${format(date, 'MMM d, yyyy')}`
+
+            case 'monthly':
+                const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+                const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+                return `${format(monthStart, 'MMM d')} - ${format(monthEnd, 'MMM d, yyyy')}`
+
+            case '6months':
+                const sixMonthsAgo = new Date(date)
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+                return `${format(sixMonthsAgo, 'MMM d, yyyy')} - ${format(date, 'MMM d, yyyy')}`
+
+            default:
+                return format(date, 'MMM d, yyyy')
+        }
+    }
+
+    const getPeriodLabel = () => {
+        switch (period) {
+            case 'daily': return 'Daily Report'
+            case 'weekly': return 'Weekly Report (7 days)'
+            case 'monthly': return 'Monthly Report'
+            case '6months': return 'Last 6 Months'
+            default: return 'Report'
+        }
+    }
+
     const exportToCSV = () => {
         toast.success('Export feature coming soon')
     }
@@ -215,57 +253,87 @@ function CostAnalysisPage() {
             <div className="flex flex-1 flex-col gap-6 p-4 bg-muted/30">
                 {/* Header Section */}
                 <Card className="border-2 shadow-sm">
-                    <CardContent className="py-1 px-4">
+                    <CardContent className="py-3 px-4">
                         <div className="flex items-start justify-between gap-6">
                             <div className="flex-1">
                                 <h1 className="text-2xl font-bold tracking-tight">Cost Analysis Dashboard</h1>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    Production cost tracking and rejection cost analysis
-                                </p>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        Production cost tracking and rejection cost analysis
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                            {getPeriodLabel()}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                            {getDateRangeDisplay()}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                                    <CalendarIcon className="h-4 w-4 text-primary" />
-                                    <div>
-                                        <Label className="text-xs font-semibold">Report Date</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="ghost" className="h-6 p-0 text-xs font-normal hover:bg-transparent">
-                                                    {format(selectedDate, 'PPP')}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <Label className="text-xs">Period:</Label>
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs font-semibold">Period Type</Label>
                                     <Select value={period} onValueChange={setPeriod}>
-                                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                                        <SelectTrigger className="w-[160px] h-8 text-xs">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="daily">Daily</SelectItem>
-                                            <SelectItem value="weekly">Weekly</SelectItem>
+                                            <SelectItem value="weekly">Weekly (7 days)</SelectItem>
                                             <SelectItem value="monthly">Monthly</SelectItem>
                                             <SelectItem value="6months">Last 6 Months</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                <Button size="default" variant="outline" onClick={fetchData} disabled={loading} className="gap-2">
-                                    {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                                    Refresh
-                                </Button>
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs font-semibold">
+                                        {period === 'daily' ? 'Select Date' : period === 'weekly' || period === '6months' ? 'End Date' : 'Any Date in Month'}
+                                    </Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-[180px] h-8 text-xs justify-start font-normal">
+                                                <CalendarIcon className="mr-2 h-3 w-3" />
+                                                {format(selectedDate, 'PPP')}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="end">
+                                            <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
 
-                                <Button size="default" variant="outline" onClick={exportToCSV} className="gap-2">
-                                    <Download className="h-4 w-4" />
-                                    Export
-                                </Button>
+                                <div className="flex flex-col gap-1">
+                                    <Label className="text-xs font-semibold opacity-0">Actions</Label>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={fetchData}
+                                            disabled={loading}
+                                            className="gap-2 h-8"
+                                        >
+                                            {loading ? (
+                                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <RefreshCw className="h-3 w-3" />
+                                            )}
+                                            Refresh
+                                        </Button>
+
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={exportToCSV}
+                                            className="gap-2 h-8"
+                                        >
+                                            <Download className="h-3 w-3" />
+                                            Export
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </CardContent>
