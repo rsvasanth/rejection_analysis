@@ -647,7 +647,21 @@ function CostAnalysisPage() {
                                                     </TableHead>
                                                     <TableHead className="text-right">Qty</TableHead>
                                                     <TableHead className="text-right">Rate</TableHead>
-                                                    <TableHead className="text-right">Value</TableHead>
+                                                    <TableHead className="text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="-ml-3 h-8"
+                                                            onClick={() => handleSort('production_value')}
+                                                        >
+                                                            Value
+                                                            {sortConfig?.key === 'production_value' ? (
+                                                                sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                                            ) : (
+                                                                <ArrowUpDown className="ml-2 h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </TableHead>
                                                     <TableHead>
                                                         <Button
                                                             variant="ghost"
@@ -769,7 +783,21 @@ function CostAnalysisPage() {
                                                     <TableHead className="text-right">Rejected</TableHead>
                                                     <TableHead className="text-right">Rej %</TableHead>
                                                     <TableHead className="text-right">Rate</TableHead>
-                                                    <TableHead className="text-right">Cost</TableHead>
+                                                    <TableHead className="text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="-ml-3 h-8"
+                                                            onClick={() => handleSort('rejection_cost')}
+                                                        >
+                                                            Cost
+                                                            {sortConfig?.key === 'rejection_cost' ? (
+                                                                sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                                            ) : (
+                                                                <ArrowUpDown className="ml-2 h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </TableHead>
                                                 </TableRow>
                                                 <TableRow className="bg-muted/50">
                                                     <TableHead></TableHead>
@@ -854,7 +882,21 @@ function CostAnalysisPage() {
                                                     <TableHead className="text-right">RBS</TableHead>
                                                     <TableHead className="text-right">Impression</TableHead>
                                                     <TableHead className="text-right">C/M/RR %</TableHead>
-                                                    <TableHead className="text-right">DF Cost</TableHead>
+                                                    <TableHead className="text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="-ml-3 h-8"
+                                                            onClick={() => handleSort('df_vendor_cost')}
+                                                        >
+                                                            DF Cost
+                                                            {sortConfig?.key === 'df_vendor_cost' ? (
+                                                                sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                                            ) : (
+                                                                <ArrowUpDown className="ml-2 h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </TableHead>
                                                 </TableRow>
                                                 <TableRow className="bg-muted/50">
                                                     <TableHead></TableHead>
@@ -939,7 +981,21 @@ function CostAnalysisPage() {
                                                     <TableHead className="text-right">Under Fill</TableHead>
                                                     <TableHead className="text-right">Trim %</TableHead>
                                                     <TableHead className="text-right">Trim Cost</TableHead>
-                                                    <TableHead className="text-right">Total Cost</TableHead>
+                                                    <TableHead className="text-right">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="-ml-3 h-8"
+                                                            onClick={() => handleSort('total_fvi_cost')}
+                                                        >
+                                                            Total Cost
+                                                            {sortConfig?.key === 'total_fvi_cost' ? (
+                                                                sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                                                            ) : (
+                                                                <ArrowUpDown className="ml-2 h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </TableHead>
                                                 </TableRow>
                                                 <TableRow className="bg-muted/50">
                                                     <TableHead></TableHead>
