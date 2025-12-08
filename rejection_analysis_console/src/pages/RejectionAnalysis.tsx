@@ -24,7 +24,10 @@ import {
   RefreshCw,
   Download,
   Eye,
-  Save
+  Save,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react'
 import { CARGenerationWizard } from '@/components/car/car-generation-wizard'
 import { FinalInspectionGroupedTable } from '@/components/FinalInspectionGroupedTable'
@@ -182,6 +185,14 @@ function InspectionRecordsTable({
   onGenerateCAR: (record: LotInspectionRecord) => void
   onShowRejectionDetails: (inspectionEntry: string) => void
 }) {
+  // Sorting and filtering state
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
+  const [filters, setFilters] = useState({
+    lotNo: '',
+    itemCode: '',
+    operator: ''
+  })
+
   const getRejectionColor = (percentage: number) => {
     if (percentage >= 5.0) return 'text-red-600 font-bold'
     if (percentage >= 3.0) return 'text-yellow-600'
@@ -190,11 +201,68 @@ function InspectionRecordsTable({
 
   const shortenPressNumber = (pressNumber: string) => {
     if (!pressNumber) return '—'
-    // Remove common prefixes like "PRESS-", "Press-", "MACHINE-", etc.
     const shortened = pressNumber
       .replace(/^(PRESS|Press|MACHINE|Machine|M)-?/i, '')
       .trim()
     return shortened || pressNumber
+  }
+
+  // Sorting function
+  const sortData = <T extends Record<string, any>>(data: T[], key: string, direction: 'asc' | 'desc'): T[] => {
+    return [...data].sort((a, b) => {
+      const aVal = a[key]
+      const bVal = b[key]
+
+      if (aVal === null || aVal === undefined) return 1
+      if (bVal === null || bVal === undefined) return -1
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return direction === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
+      }
+
+      return direction === 'asc'
+        ? (aVal > bVal ? 1 : -1)
+        : (aVal < bVal ? 1 : -1)
+    })
+  }
+
+  // Filter function
+  const filterData = (data: LotInspectionRecord[]): LotInspectionRecord[] => {
+    return data.filter(row => {
+      const lotMatch = !filters.lotNo ||
+        row.lot_no?.toString().toLowerCase().includes(filters.lotNo.toLowerCase())
+      const itemMatch = !filters.itemCode ||
+        row.item_code?.toString().toLowerCase().includes(filters.itemCode.toLowerCase())
+      const operatorMatch = !filters.operator ||
+        row.operator_name?.toString().toLowerCase().includes(filters.operator.toLowerCase())
+
+      return lotMatch && itemMatch && operatorMatch
+    })
+  }
+
+  // Handle sort
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  // Handle filter change
+  const handleFilterChange = (filterKey: 'lotNo' | 'itemCode' | 'operator', value: string) => {
+    setFilters(prev => ({ ...prev, [filterKey]: value }))
+  }
+
+  // Get processed data (filtered and sorted)
+  const getProcessedData = (): LotInspectionRecord[] => {
+    let processed = filterData(records)
+    if (sortConfig) {
+      processed = sortData(processed, sortConfig.key, sortConfig.direction)
+    }
+    return processed
   }
 
   if (loading) {
@@ -206,6 +274,8 @@ function InspectionRecordsTable({
       </div>
     )
   }
+
+  const processedRecords = getProcessedData()
 
   if (records.length === 0) {
     return (
@@ -223,23 +293,65 @@ function InspectionRecordsTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50">Date</TableHead>
-              <TableHead className="w-[70px] sticky top-0 bg-muted/50">Shift</TableHead>
-              <TableHead className="w-[110px] sticky top-0 bg-muted/50">Operator</TableHead>
-              <TableHead className="w-[50px] sticky top-0 bg-muted/50">Press</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50">Item</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50">Mould</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50">Lot No</TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Patrol</TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Line</TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50">Lot</TableHead>
-              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50">Cost</TableHead>
-              <TableHead className="w-[80px] sticky top-0 bg-muted/50">Status</TableHead>
-              <TableHead className="w-[100px] sticky top-0 bg-muted/50">Action</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+                <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('production_date')}>
+                  Date
+                  {sortConfig?.key === 'production_date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[70px] sticky top-0 bg-muted/50 z-10">Shift</TableHead>
+              <TableHead className="w-[110px] sticky top-0 bg-muted/50 z-10">
+                <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('operator_name')}>
+                  Operator
+                  {sortConfig?.key === 'operator_name' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[50px] sticky top-0 bg-muted/50 z-10">Press</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+                <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('item_code')}>
+                  Item
+                  {sortConfig?.key === 'item_code' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">Mould</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+                <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('lot_no')}>
+                  Lot No
+                  {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
+                </Button>
+              </TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Patrol</TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Line</TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Lot</TableHead>
+              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50 z-10">Cost</TableHead>
+              <TableHead className="w-[80px] sticky top-0 bg-muted/50 z-10">Status</TableHead>
+              <TableHead className="w-[100px] sticky top-0 bg-muted/50 z-10">Action</TableHead>
+            </TableRow>
+            {/* Filter Row */}
+            <TableRow className="bg-muted/30">
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
+                <Input placeholder="Filter..." value={filters.operator} onChange={(e) => handleFilterChange('operator', e.target.value)} className="h-7 text-xs" />
+              </TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
+                <Input placeholder="Filter..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-7 text-xs" />
+              </TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
+                <Input placeholder="Filter..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-7 text-xs" />
+              </TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((record, index) => (
+            {processedRecords.map((record, index) => (
               <TableRow
                 key={index}
                 className={record.exceeds_threshold ? 'bg-red-50' : ''}
