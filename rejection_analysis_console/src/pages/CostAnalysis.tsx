@@ -68,7 +68,6 @@ interface IncomingData {
     cmrr_pct: number
     df_vendor_cost: number
     total_rejection_cost: number
-    vendor_name: string
 }
 
 interface FVIData {

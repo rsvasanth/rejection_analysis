@@ -296,7 +296,6 @@ def get_incoming_inspection_data(lot_numbers):
             ie.inspected_qty_nos,
             ie.total_rejected_qty,
             ie.total_rejected_qty_in_percentage as rejection_pct,
-            ie.supplier as vendor_name,
             item.standard_rate as item_rate
         FROM `tabInspection Entry` ie
         LEFT JOIN `tabItem` item ON ie.product_ref_no = item.name
