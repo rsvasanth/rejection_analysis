@@ -209,10 +209,10 @@ def get_moulding_data(lot_numbers, work_planning_lots):
             (mpe.number_of_lifts * mpe.no_of_running_cavities) as total_pieces,
             mpe.employee_name as operator_name,
             jc.workstation as machine_name,
-            item.standard_rate as item_rate
+            ip.price_list_rate as item_rate
         FROM `tabMoulding Production Entry` mpe
         LEFT JOIN `tabJob Card` jc ON mpe.job_card = jc.name
-        LEFT JOIN `tabItem` item ON mpe.item_to_produce = item.name
+        LEFT JOIN `tabItem Price` ip ON mpe.item_to_produce = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE mpe.scan_lot_number IN ({lot_numbers_str})
         AND mpe.docstatus = 1
         ORDER BY mpe.moulding_date DESC, mpe.scan_lot_number
@@ -258,9 +258,9 @@ def get_lot_rejection_data(lot_numbers):
             ie.total_rejected_qty,
             ie.total_rejected_qty_in_percentage as rejection_pct,
             ie.total_rejected_qty_kg as rejected_weight_kg,
-            item.standard_rate as item_rate
+            ip.price_list_rate as item_rate
         FROM `tabInspection Entry` ie
-        LEFT JOIN `tabItem` item ON ie.product_ref_no = item.name
+        LEFT JOIN `tabItem Price` ip ON ie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE ie.lot_no IN ({lot_numbers_str})
         AND ie.inspection_type = 'Lot Inspection'
         AND ie.docstatus = 1
@@ -296,9 +296,9 @@ def get_incoming_inspection_data(lot_numbers):
             ie.inspected_qty_nos,
             ie.total_rejected_qty,
             ie.total_rejected_qty_in_percentage as rejection_pct,
-            item.standard_rate as item_rate
+            ip.price_list_rate as item_rate
         FROM `tabInspection Entry` ie
-        LEFT JOIN `tabItem` item ON ie.product_ref_no = item.name
+        LEFT JOIN `tabItem Price` ip ON ie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE ie.lot_no IN ({lot_numbers_str})
         AND ie.inspection_type = 'Incoming Inspection'
         AND ie.docstatus = 1
@@ -372,14 +372,13 @@ def get_fvi_data(lot_numbers):
             sie.name as inspection_entry,
             DATE(sie.posting_date) as inspection_date,
             sie.lot_no,
-            sie.item as item_code,
-            sie.qty_to_inspect as inspected_qty,
+            sie.product_ref_no as item_code,
+            sie.inspected_qty_nos as inspected_qty,
             sie.total_rejected_qty as rejected_qty,
-            sie.final_inspection_rejection_perc as rejection_pct,
-            sie.trimming_rejection_pct,
-            item.standard_rate as item_rate
+            sie.total_rejected_qty_in_percentage as rejection_pct,
+            ip.price_list_rate as item_rate
         FROM `tabSpp Inspection Entry` sie
-        LEFT JOIN `tabItem` item ON sie.item = item.name
+        LEFT JOIN `tabItem Price` ip ON sie.product_ref_no = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE sie.lot_no IN ({lot_numbers_str})
         AND sie.inspection_type = 'FVI'
         AND sie.docstatus = 1
@@ -398,9 +397,15 @@ def get_fvi_data(lot_numbers):
         inspected_qty = flt(row.get('inspected_qty', 0))
         rate = flt(row.get('item_rate', 0))
         
-        # Trimming Rejection Cost = Qty × Trim Rejection % × Rate
-        trim_pct = flt(row.get('trimming_rejection_pct', 0)) / 100.0
-        row['trimming_cost'] = inspected_qty * trim_pct * rate
+        # Since trimming_rejection_pct doesn't exist, calculate from defects
+        # Trimming % = (Over Trim / Inspected Qty) * 100
+        trimming_pct = 0
+        if inspected_qty > 0:
+            trimming_pct = (row['over_trim_qty'] / inspected_qty) * 100
+        row['trimming_rejection_pct'] = trimming_pct
+        
+        # Trimming Rejection Cost = Over Trim Qty × Rate
+        row['trimming_cost'] = row['over_trim_qty'] * rate
         
         # Final Rejection Cost = Rejected Qty × Rate
         rejected_qty = flt(row.get('rejected_qty', 0))
