@@ -6,6 +6,106 @@ All 4 stages: Moulding, Lot Rejection, Incoming Inspection, FVI
 import frappe
 from frappe import _
 from frappe.utils import flt, today, add_days, add_months, getdate
+import requests
+import json
+
+
+def get_remote_pricing_config():
+    """Get remote pricing configuration from Settings or site_config"""
+    try:
+        settings = frappe.get_single("Rejection Analysis Settings")
+        remote_url = settings.sales_site_url or ""
+        api_key = settings.sales_site_api_key or ""
+        api_secret = settings.get_password("sales_site_api_secret") or ""
+    except Exception:
+        remote_url = frappe.conf.get("sales_site_url") or ""
+        api_key = frappe.conf.get("sales_site_api_key") or ""
+        api_secret = frappe.conf.get("sales_site_api_secret") or ""
+    
+    return remote_url, api_key, api_secret
+
+
+def convert_to_finished_product_code(material_item_code):
+    """
+    Convert Material item code to Finished Product code
+    Example: T2438 → F2438, TDS001 → FDS001
+    """
+    if not material_item_code:
+        return None
+    
+    # Clean up item code: remove 't.', 'T.', spaces
+    cleaned = material_item_code.strip().replace('t.', '').replace('T.', '').split()[0]
+    
+    # Check if starts with T
+    if cleaned.upper().startswith('T'):
+        # Transform T → F
+        return 'F' + cleaned[1:]
+    
+    return None
+
+
+def fetch_remote_item_prices(item_codes):
+    """
+    Fetch item prices from remote Sales site
+    
+    Args:
+        item_codes: List of Finished Product item codes (F-prefix)
+    
+    Returns:
+        dict: Mapping of item_code → price_list_rate
+    """
+    if not item_codes:
+        return {}
+    
+    remote_url, api_key, api_secret = get_remote_pricing_config()
+    
+    if not (remote_url and api_key and api_secret):
+        return {}
+    
+    try:
+        filters = [
+            ["item_code", "in", item_codes],
+            ["price_list", "=", "Standard Selling"]
+        ]
+        fields = ["item_code", "price_list_rate"]
+        
+        response = requests.get(
+            f"{remote_url}/api/resource/Item Price",
+            params={
+                "filters": json.dumps(filters),
+                "fields": json.dumps(fields),
+                "limit_page_length": 500
+            },
+            headers={
+                "Authorization": f"token {api_key}:{api_secret}"
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            price_map = {}
+            for item_price in data.get("data", []):
+                item_code = item_price.get("item_code")
+                rate = flt(item_price.get("price_list_rate", 0))
+                if item_code and rate > 0:
+                    price_map[item_code] = rate
+            return price_map
+        else:
+            error_text = response.text[:500] if response.text else "No response"
+            frappe.log_error(
+                f"Remote pricing API returned {response.status_code}: {error_text}",
+                "Cost Analysis Remote Pricing Error"
+            )
+            return {}
+            
+    except requests.exceptions.Timeout:
+        frappe.log_error("Remote pricing API timeout", "Cost Analysis Timeout")
+        return {}
+    except Exception as e:
+        error_msg = str(e)[:300]
+        frappe.log_error(f"Remote pricing failed: {error_msg}", "Cost Analysis Pricing Error")
+        return {}
 
 
 @frappe.whitelist()
@@ -189,7 +289,7 @@ def get_work_planning_lots(from_date, to_date):
 
 
 def get_moulding_data(lot_numbers, work_planning_lots):
-    """Stage 1: Get Moulding Production Entry data with rates"""
+    """Stage 1: Get Moulding Production Entry data with remote pricing"""
     
     if not lot_numbers:
         return []
@@ -197,6 +297,7 @@ def get_moulding_data(lot_numbers, work_planning_lots):
     lot_plan_map = {lot['lot_number']: lot for lot in work_planning_lots}
     lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
     
+    # Fetch MPE data WITHOUT pricing (remove Item Price JOIN)
     query = f"""
         SELECT 
             mpe.name as mpe_name,
@@ -208,11 +309,9 @@ def get_moulding_data(lot_numbers, work_planning_lots):
             mpe.no_of_running_cavities as cavities,
             (mpe.number_of_lifts * mpe.no_of_running_cavities) as total_pieces,
             mpe.employee_name as operator_name,
-            jc.workstation as machine_name,
-            ip.price_list_rate as item_rate
+            jc.workstation as machine_name
         FROM `tabMoulding Production Entry` mpe
         LEFT JOIN `tabJob Card` jc ON mpe.job_card = jc.name
-        LEFT JOIN `tabItem Price` ip ON mpe.item_to_produce = ip.item_code AND ip.price_list = 'Standard Selling'
         WHERE mpe.scan_lot_number IN ({lot_numbers_str})
         AND mpe.docstatus = 1
         ORDER BY mpe.moulding_date DESC, mpe.scan_lot_number
@@ -220,9 +319,29 @@ def get_moulding_data(lot_numbers, work_planning_lots):
     
     mpe_data = frappe.db.sql(query, as_dict=True)
     
+    # Collect unique Material item codes (T-prefix) and convert to Finished Product codes (F-prefix)
+    material_items = set()
+    finished_items = []
+    t_to_f_map = {}  # Map T codes to F codes
+    
+    for row in mpe_data:
+        material_code = row.get('item_code')
+        if material_code:
+            material_items.add(material_code)
+            finished_code = convert_to_finished_product_code(material_code)
+            if finished_code:
+                finished_items.append(finished_code)
+                t_to_f_map[material_code] = finished_code
+    
+    # Fetch remote pricing for Finished Product codes
+    pricing_map = fetch_remote_item_prices(finished_items)
+    
+    # Map pricing back to Material codes and populate data
     for row in mpe_data:
         lot_no = row['lot_no']
+        material_code = row.get('item_code')
         
+        # Add work planning info
         if lot_no in lot_plan_map:
             row['work_plan'] = lot_plan_map[lot_no]['work_plan']
             row['planned_date'] = lot_plan_map[lot_no]['planned_date']
@@ -232,9 +351,13 @@ def get_moulding_data(lot_numbers, work_planning_lots):
             row['planned_date'] = None
             row['plan_source'] = None
         
+        # Get rate from remote pricing
+        finished_code = t_to_f_map.get(material_code)
+        rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        row['item_rate'] = rate
+        
         # Calculate Production Value = Qty × Rate
         qty = flt(row.get('production_qty_nos', 0))
-        rate = flt(row.get('item_rate', 0))
         row['production_value'] = qty * rate
     
     return mpe_data
