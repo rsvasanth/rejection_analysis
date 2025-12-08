@@ -441,7 +441,7 @@ def get_incoming_inspection_data(lot_numbers):
             DATE(ie.posting_date) as inspection_date,
             ie.lot_no,
             ie.product_ref_no as item_code,
-            ie.inspected_qty_nos,
+            ie.total_inspected_qty_nos as inspected_qty_nos,
             ie.total_rejected_qty,
             ie.total_rejected_qty_in_percentage as rejection_pct
         FROM `tabInspection Entry` ie
