@@ -29,6 +29,15 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import {
+    ChartConfig,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+    ChartLegend,
+    ChartLegendContent
+} from '@/components/ui/chart'
 
 // TypeScript Interfaces
 interface MouldingData {
@@ -566,6 +575,121 @@ function CostAnalysisPage() {
                                         <p className="text-xs text-muted-foreground">Rejection / Production</p>
                                     </div>
                                 </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Production Value Chart */}
+                        <Card>
+                            <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+                                <div className="grid flex-1 gap-1">
+                                    <CardTitle>Production Value Trend</CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        Daily production value from moulding operations
+                                    </p>
+                                </div>
+                                <Select
+                                    value={(() => {
+                                        if (period === 'weekly') return '7d'
+                                        if (period === 'monthly') return '30d'
+                                        return '90d'
+                                    })()}
+                                    onValueChange={(value) => {
+                                        if (value === '7d') setPeriod('weekly')
+                                        else if (value === '30d') setPeriod('monthly')
+                                        else setPeriod('6months')
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[160px] rounded-lg" aria-label="Select a value">
+                                        <SelectValue placeholder="Select range" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl">
+                                        <SelectItem value="7d" className="rounded-lg">Last 7 days</SelectItem>
+                                        <SelectItem value="30d" className="rounded-lg">Last 30 days</SelectItem>
+                                        <SelectItem value="90d" className="rounded-lg">Last 3 months</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </CardHeader>
+                            <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+                                {loading ? (
+                                    <div className="h-[250px] flex items-center justify-center">
+                                        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                                    </div>
+                                ) : mouldingData.length === 0 ? (
+                                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                                        <p>No data available for the selected period</p>
+                                    </div>
+                                ) : (
+                                    <ChartContainer
+                                        config={{
+                                            production_value: {
+                                                label: "Production Value",
+                                                color: "hsl(var(--chart-1))",
+                                            },
+                                        } satisfies ChartConfig}
+                                        className="aspect-auto h-[250px] w-full"
+                                    >
+                                        <AreaChart
+                                            data={(() => {
+                                                // Group moulding data by date and sum production values
+                                                const dateMap = new Map<string, number>()
+                                                mouldingData.forEach(item => {
+                                                    const date = item.moulding_date
+                                                    const current = dateMap.get(date) || 0
+                                                    dateMap.set(date, current + (item.production_value || 0))
+                                                })
+
+                                                // Convert to array and sort by date
+                                                return Array.from(dateMap.entries())
+                                                    .map(([date, value]) => ({ date, production_value: value }))
+                                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                            })()}
+                                        >
+                                            <defs>
+                                                <linearGradient id="fillProductionValue" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--color-production_value)" stopOpacity={0.8} />
+                                                    <stop offset="95%" stopColor="var(--color-production_value)" stopOpacity={0.1} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid vertical={false} />
+                                            <XAxis
+                                                dataKey="date"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickMargin={8}
+                                                minTickGap={32}
+                                                tickFormatter={(value) => {
+                                                    const date = new Date(value)
+                                                    return date.toLocaleDateString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                    })
+                                                }}
+                                            />
+                                            <ChartTooltip
+                                                cursor={false}
+                                                content={
+                                                    <ChartTooltipContent
+                                                        labelFormatter={(value) => {
+                                                            return new Date(value).toLocaleDateString("en-US", {
+                                                                month: "short",
+                                                                day: "numeric",
+                                                                year: "numeric"
+                                                            })
+                                                        }}
+                                                        formatter={(value) => formatCurrency(Number(value))}
+                                                        indicator="dot"
+                                                    />
+                                                }
+                                            />
+                                            <Area
+                                                dataKey="production_value"
+                                                type="natural"
+                                                fill="url(#fillProductionValue)"
+                                                stroke="var(--color-production_value)"
+                                            />
+                                        </AreaChart>
+                                    </ChartContainer>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
