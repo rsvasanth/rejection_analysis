@@ -582,9 +582,9 @@ function CostAnalysisPage() {
                         <Card>
                             <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
                                 <div className="grid flex-1 gap-1">
-                                    <CardTitle>Production Value Trend</CardTitle>
+                                    <CardTitle>Production Value vs Rejection Cost Trend</CardTitle>
                                     <p className="text-sm text-muted-foreground">
-                                        Daily production value from moulding operations
+                                        Showing daily production value and rejection cost over time
                                     </p>
                                 </div>
                                 <Select
@@ -611,11 +611,11 @@ function CostAnalysisPage() {
                             </CardHeader>
                             <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
                                 {loading ? (
-                                    <div className="h-[250px] flex items-center justify-center">
+                                    <div className="h-[350px] flex items-center justify-center">
                                         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                                     </div>
                                 ) : mouldingData.length === 0 ? (
-                                    <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                                    <div className="h-[350px] flex items-center justify-center text-muted-foreground">
                                         <p>No data available for the selected period</p>
                                     </div>
                                 ) : (
@@ -625,22 +625,63 @@ function CostAnalysisPage() {
                                                 label: "Production Value",
                                                 color: "hsl(var(--chart-1))",
                                             },
+                                            rejection_cost: {
+                                                label: "Rejection Cost",
+                                                color: "hsl(var(--chart-2))",
+                                            },
                                         } satisfies ChartConfig}
-                                        className="aspect-auto h-[250px] w-full"
+                                        className="aspect-auto h-[350px] w-full"
                                     >
                                         <AreaChart
                                             data={(() => {
-                                                // Group moulding data by date and sum production values
-                                                const dateMap = new Map<string, number>()
+                                                // Group data by date and calculate values
+                                                const dateMap = new Map<string, { production_value: number; rejection_cost: number }>()
+
+                                                // Add production values from moulding data
                                                 mouldingData.forEach(item => {
                                                     const date = item.moulding_date
-                                                    const current = dateMap.get(date) || 0
-                                                    dateMap.set(date, current + (item.production_value || 0))
+                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+                                                    dateMap.set(date, {
+                                                        ...current,
+                                                        production_value: current.production_value + (item.production_value || 0)
+                                                    })
+                                                })
+
+                                                // Add rejection costs from all rejection data
+                                                lotRejectionData.forEach(item => {
+                                                    const date = item.lot_no.substring(0, 10) // Extract date from lot number
+                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+                                                    dateMap.set(date, {
+                                                        ...current,
+                                                        rejection_cost: current.rejection_cost + (item.rejection_cost || 0)
+                                                    })
+                                                })
+
+                                                incomingData.forEach(item => {
+                                                    const date = item.inspection_date
+                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+                                                    dateMap.set(date, {
+                                                        ...current,
+                                                        rejection_cost: current.rejection_cost + (item.df_vendor_cost || 0)
+                                                    })
+                                                })
+
+                                                fviData.forEach(item => {
+                                                    const date = item.inspection_date
+                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
+                                                    dateMap.set(date, {
+                                                        ...current,
+                                                        rejection_cost: current.rejection_cost + (item.total_fvi_cost || 0)
+                                                    })
                                                 })
 
                                                 // Convert to array and sort by date
                                                 return Array.from(dateMap.entries())
-                                                    .map(([date, value]) => ({ date, production_value: value }))
+                                                    .map(([date, values]) => ({
+                                                        date,
+                                                        production_value: values.production_value,
+                                                        rejection_cost: values.rejection_cost
+                                                    }))
                                                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                                             })()}
                                         >
@@ -649,8 +690,12 @@ function CostAnalysisPage() {
                                                     <stop offset="5%" stopColor="var(--color-production_value)" stopOpacity={0.8} />
                                                     <stop offset="95%" stopColor="var(--color-production_value)" stopOpacity={0.1} />
                                                 </linearGradient>
+                                                <linearGradient id="fillRejectionCost" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="var(--color-rejection_cost)" stopOpacity={0.8} />
+                                                    <stop offset="95%" stopColor="var(--color-rejection_cost)" stopOpacity={0.1} />
+                                                </linearGradient>
                                             </defs>
-                                            <CartesianGrid vertical={false} />
+                                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
                                             <XAxis
                                                 dataKey="date"
                                                 tickLine={false}
@@ -682,11 +727,20 @@ function CostAnalysisPage() {
                                                 }
                                             />
                                             <Area
+                                                dataKey="rejection_cost"
+                                                type="natural"
+                                                fill="url(#fillRejectionCost)"
+                                                stroke="var(--color-rejection_cost)"
+                                                stackId="a"
+                                            />
+                                            <Area
                                                 dataKey="production_value"
                                                 type="natural"
                                                 fill="url(#fillProductionValue)"
                                                 stroke="var(--color-production_value)"
+                                                stackId="a"
                                             />
+                                            <ChartLegend content={<ChartLegendContent />} />
                                         </AreaChart>
                                     </ChartContainer>
                                 )}
