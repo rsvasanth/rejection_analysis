@@ -747,18 +747,43 @@ function CostAnalysisPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead>Lot No</TableHead>
-                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('inspection_date')}>
+                                                            Date
+                                                            {sortConfig?.key === 'inspection_date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('lot_no')}>
+                                                            Lot No
+                                                            {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('item_code')}>
+                                                            Item
+                                                            {sortConfig?.key === 'item_code' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
                                                     <TableHead className="text-right">Inspected</TableHead>
                                                     <TableHead className="text-right">Rejected</TableHead>
                                                     <TableHead className="text-right">Rej %</TableHead>
                                                     <TableHead className="text-right">Rate</TableHead>
                                                     <TableHead className="text-right">Cost</TableHead>
                                                 </TableRow>
+                                                <TableRow className="bg-muted/50">
+                                                    <TableHead></TableHead>
+                                                    <TableHead><Input placeholder="Filter lot..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead><Input placeholder="Filter item..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {lotRejectionData.map((row) => (
+                                                {getProcessedData(lotRejectionData).map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
@@ -807,18 +832,43 @@ function CostAnalysisPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead>Lot No</TableHead>
-                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('inspection_date')}>
+                                                            Date
+                                                            {sortConfig?.key === 'inspection_date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('lot_no')}>
+                                                            Lot No
+                                                            {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('item_code')}>
+                                                            Item
+                                                            {sortConfig?.key === 'item_code' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
                                                     <TableHead className="text-right">Cutmark</TableHead>
                                                     <TableHead className="text-right">RBS</TableHead>
                                                     <TableHead className="text-right">Impression</TableHead>
                                                     <TableHead className="text-right">C/M/RR %</TableHead>
                                                     <TableHead className="text-right">DF Cost</TableHead>
                                                 </TableRow>
+                                                <TableRow className="bg-muted/50">
+                                                    <TableHead></TableHead>
+                                                    <TableHead><Input placeholder="Filter lot..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead><Input placeholder="Filter item..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {incomingData.map((row) => (
+                                                {getProcessedData(incomingData).map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
@@ -867,18 +917,43 @@ function CostAnalysisPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead>Lot No</TableHead>
-                                                    <TableHead>Item</TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('inspection_date')}>
+                                                            Date
+                                                            {sortConfig?.key === 'inspection_date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('lot_no')}>
+                                                            Lot No
+                                                            {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        <Button variant="ghost" size="sm" className="-ml-3 h-8" onClick={() => handleSort('item_code')}>
+                                                            Item
+                                                            {sortConfig?.key === 'item_code' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />) : (<ArrowUpDown className="ml-2 h-4 w-4" />)}
+                                                        </Button>
+                                                    </TableHead>
                                                     <TableHead className="text-right">Over Trim</TableHead>
                                                     <TableHead className="text-right">Under Fill</TableHead>
                                                     <TableHead className="text-right">Trim %</TableHead>
                                                     <TableHead className="text-right">Trim Cost</TableHead>
                                                     <TableHead className="text-right">Total Cost</TableHead>
                                                 </TableRow>
+                                                <TableRow className="bg-muted/50">
+                                                    <TableHead></TableHead>
+                                                    <TableHead><Input placeholder="Filter lot..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead><Input placeholder="Filter item..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-8 text-xs" /></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                    <TableHead></TableHead>
+                                                </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {fviData.map((row) => (
+                                                {getProcessedData(fviData).map((row) => (
                                                     <TableRow key={row.inspection_entry}>
                                                         <TableCell className="text-sm">{formatDate(row.inspection_date)}</TableCell>
                                                         <TableCell className="font-mono font-medium text-sm">{row.lot_no}</TableCell>
