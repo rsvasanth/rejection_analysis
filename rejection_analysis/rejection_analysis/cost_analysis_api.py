@@ -505,7 +505,7 @@ def get_incoming_defects(inspection_entry):
             SUM(rejected_qty) as qty
         FROM `tabInspection Entry Item`
         WHERE parent = %s
-        AND type_of_defect IN ('Cutmark', 'RBS Rejection', 'IMPRESSION MARK')
+        AND type_of_defect IN ('CUTMARK-(CU)', 'RIB', 'RBS Rejection')
         GROUP BY type_of_defect
     """
     
@@ -514,12 +514,10 @@ def get_incoming_defects(inspection_entry):
     defects = {}
     for row in defects_data:
         reason = row['type_of_defect']
-        if reason == 'Cutmark':
+        if reason == 'CUTMARK-(CU)':
             defects['cutmark'] = flt(row['qty'], 2)
-        elif reason == 'RBS Rejection':
+        elif reason in ('RIB', 'RBS Rejection'):  # Handle both variations
             defects['rbs'] = flt(row['qty'], 2)
-        elif reason == 'IMPRESSION MARK':
-            defects['impression'] = flt(row['qty'], 2)
     
     return defects
 
