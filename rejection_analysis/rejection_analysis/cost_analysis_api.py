@@ -28,7 +28,10 @@ def get_remote_pricing_config():
 def convert_to_finished_product_code(material_item_code):
     """
     Convert Material item code to Finished Product code
-    Example: T2438 → F2438, TDS001 → FDS001
+    Examples:
+    - T2438 → F2438 (Material to Finished)
+    - P6117 → P6117 (Product code, already finished)
+    - F2438 → F2438 (Already finished product code)
     """
     if not material_item_code:
         return None
@@ -36,10 +39,15 @@ def convert_to_finished_product_code(material_item_code):
     # Clean up item code: remove 't.', 'T.', spaces
     cleaned = material_item_code.strip().replace('t.', '').replace('T.', '').split()[0]
     
-    # Check if starts with T
-    if cleaned.upper().startswith('T'):
-        # Transform T → F
+    # Check prefix
+    first_char = cleaned[0].upper() if cleaned else ''
+    
+    if first_char == 'T':
+        # Transform T → F (Material to Finished Product)
         return 'F' + cleaned[1:]
+    elif first_char in ('P', 'F'):
+        # P-codes and F-codes are already finished product codes
+        return cleaned.upper()
     
     return None
 
