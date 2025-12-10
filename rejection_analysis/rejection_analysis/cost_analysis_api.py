@@ -543,6 +543,7 @@ def get_fvi_data(lot_numbers):
     lot_numbers_str = "'" + "','".join(lot_numbers) + "'"
     
     # Fetch FVI data WITHOUT pricing
+    # FVI uses sublots (e.g., 25H06Y01-3) so we extract the main lot part
     query = f"""
         SELECT 
             sie.name as inspection_entry,
@@ -553,7 +554,7 @@ def get_fvi_data(lot_numbers):
             sie.total_rejected_qty as rejected_qty,
             sie.total_rejected_qty_in_percentage as rejection_pct
         FROM `tabSPP Inspection Entry` sie
-        WHERE sie.lot_no IN ({lot_numbers_str})
+        WHERE SUBSTRING_INDEX(sie.lot_no, '-', 1) IN ({lot_numbers_str})
         AND sie.inspection_type = 'Final Visual Inspection'
         AND sie.docstatus = 1
         ORDER BY sie.posting_date DESC, sie.lot_no
@@ -611,7 +612,7 @@ def get_fvi_defects(inspection_entry):
         SELECT 
             type_of_defect,
             SUM(rejected_qty) as qty
-        FROM `tabSpp Inspection Entry Item`
+        FROM `tabSPP Inspection Entry Item`
         WHERE parent = %s
         AND type_of_defect IN ('Over Trim', 'Under Fill (UF)')
         GROUP BY type_of_defect
