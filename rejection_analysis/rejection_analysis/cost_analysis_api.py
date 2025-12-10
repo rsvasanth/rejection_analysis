@@ -612,9 +612,9 @@ def get_fvi_defects(inspection_entry):
         SELECT 
             type_of_defect,
             SUM(rejected_qty) as qty
-        FROM `tabSPP Inspection Entry Item`
+        FROM `tabFV Inspection Entry Item`
         WHERE parent = %s
-        AND type_of_defect IN ('Over Trim', 'Under Fill (UF)')
+        AND type_of_defect IN ('OVER TRIM', 'UNDER FILL-( UF )')
         GROUP BY type_of_defect
     """
     
@@ -623,9 +623,9 @@ def get_fvi_defects(inspection_entry):
     defects = {}
     for row in defects_data:
         reason = row['type_of_defect']
-        if reason == 'Over Trim':
+        if reason == 'OVER TRIM':
             defects['over_trim'] = flt(row['qty'], 2)
-        elif reason == 'Under Fill (UF)':
+        elif reason == 'UNDER FILL-( UF )':
             defects['under_fill'] = flt(row['qty'], 2)
     
     return defects
