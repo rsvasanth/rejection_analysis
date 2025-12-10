@@ -554,7 +554,7 @@ def get_fvi_data(lot_numbers):
             sie.total_rejected_qty_in_percentage as rejection_pct
         FROM `tabSPP Inspection Entry` sie
         WHERE sie.lot_no IN ({lot_numbers_str})
-        AND sie.inspection_type = 'FVI'
+        AND sie.inspection_type = 'Final Visual Inspection'
         AND sie.docstatus = 1
         ORDER BY sie.posting_date DESC, sie.lot_no
     """
