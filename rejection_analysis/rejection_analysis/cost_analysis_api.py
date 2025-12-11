@@ -38,11 +38,12 @@ def convert_to_finished_product_code(material_item_code):
     # Clean up item code
     cleaned = material_item_code.strip().replace('t.', '').replace('T.', '').split()[0].upper()
     
-    # Only convert T-codes to F-codes
-    if cleaned.startswith('T'):
+    # Convert T-codes (Material) and P-codes (Product) to F-codes (Finished)
+    # Remote pricing is available for F-codes
+    if cleaned.startswith('T') or cleaned.startswith('P'):
         return 'F' + cleaned[1:]
     
-    # P-codes and F-codes pass through unchanged
+    # F-codes pass through unchanged
     return cleaned
 
 
@@ -592,14 +593,16 @@ def get_fvi_data(lot_numbers):
         row['item_rate'] = rate
         
         # Calculate trimming percentage and cost
+        # Calculate trimming percentage and cost
         inspected_qty = flt(row.get('inspected_qty', 0))
         trimming_pct = (row['over_trim_qty'] / inspected_qty * 100) if inspected_qty > 0 else 0
-        row['trimming_pct'] = trimming_pct
+        row['trimming_rejection_pct'] = trimming_pct
         row['trimming_cost'] = row['over_trim_qty'] * rate
         
         # Calculate Final Rejection Cost = (Rejected Qty × Rate) + Trimming Cost
         rejected_qty = flt(row.get('rejected_qty', 0))
         rejection_cost = rejected_qty * rate
+        row['fvi_rejection_cost'] = rejection_cost
         row['total_fvi_cost'] = rejection_cost + row['trimming_cost']
     
     return fvi_data
