@@ -498,9 +498,10 @@ def get_incoming_inspection_data(lot_numbers):
         
         row['item_rate'] = rate
         
-        # Calculate DF Vendor Cost = Production Qty × C/M/RR % × Rate
-        inspected_qty = flt(row.get('inspected_qty_nos', 0))
-        row['df_vendor_cost'] = inspected_qty * cmrr_pct * rate
+        # Calculate DF Vendor Cost = Sum(Defects) * Rate
+        # More transparent calculation than inspected_qty * percentage
+        total_defects = row.get('cutmark_qty', 0) + row.get('rbs_rejection_qty', 0) + row.get('impression_mark_qty', 0)
+        row['df_vendor_cost'] = total_defects * rate
         
         # Also calculate total rejection cost
         rejected_qty = flt(row.get('total_rejected_qty', 0))
@@ -599,11 +600,12 @@ def get_fvi_data(lot_numbers):
         row['trimming_rejection_pct'] = trimming_pct
         row['trimming_cost'] = row['over_trim_qty'] * rate
         
-        # Calculate Final Rejection Cost = (Rejected Qty × Rate) + Trimming Cost
+        # Calculate Final Rejection Cost = (Rejected Qty × Rate)
+        # Note: Rejected Qty already includes trimming rejects, so we don't add trimming_cost again
         rejected_qty = flt(row.get('rejected_qty', 0))
         rejection_cost = rejected_qty * rate
         row['fvi_rejection_cost'] = rejection_cost
-        row['total_fvi_cost'] = rejection_cost + row['trimming_cost']
+        row['total_fvi_cost'] = rejection_cost  # Was previously double-adding trimming_cost
     
     return fvi_data
 
