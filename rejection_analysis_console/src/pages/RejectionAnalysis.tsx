@@ -292,62 +292,62 @@ function InspectionRecordsTable({
       <div className="overflow-auto max-h-[600px]">
         <table className="w-full caption-bottom text-sm">
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+            <TableRow className="bg-muted">
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('production_date')}>
                   Date
                   {sortConfig?.key === 'production_date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[70px] sticky top-0 bg-muted/50 z-10">Shift</TableHead>
-              <TableHead className="w-[110px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[70px] sticky top-0 bg-muted z-10">Shift</TableHead>
+              <TableHead className="w-[110px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('operator_name')}>
                   Operator
                   {sortConfig?.key === 'operator_name' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[50px] sticky top-0 bg-muted/50 z-10">Press</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[50px] sticky top-0 bg-muted z-10">Press</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('item_code')}>
                   Item
                   {sortConfig?.key === 'item_code' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">Mould</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Mould</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('lot_no')}>
                   Lot No
                   {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Patrol</TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Line</TableHead>
-              <TableHead className="w-[65px] text-center sticky top-0 bg-muted/50 z-10">Lot</TableHead>
-              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50 z-10">Cost</TableHead>
-              <TableHead className="w-[80px] sticky top-0 bg-muted/50 z-10">Status</TableHead>
-              <TableHead className="w-[100px] sticky top-0 bg-muted/50 z-10">Action</TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted z-10">Patrol</TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted z-10">Line</TableHead>
+              <TableHead className="w-[65px] text-center sticky top-0 bg-muted z-10">Lot</TableHead>
+              <TableHead className="w-[80px] text-right sticky top-0 bg-muted z-10">Cost</TableHead>
+              <TableHead className="w-[80px] sticky top-0 bg-muted z-10">Status</TableHead>
+              <TableHead className="w-[100px] sticky top-0 bg-muted z-10">Action</TableHead>
             </TableRow>
             {/* Filter Row */}
-            <TableRow className="bg-muted/30">
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.operator} onChange={(e) => handleFilterChange('operator', e.target.value)} className="h-7 text-xs" />
+            <TableRow className="bg-muted border-t border-muted-foreground/10">
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.operator} onChange={(e) => handleFilterChange('operator', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-7 text-xs" />
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-7 text-xs" />
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -549,68 +549,68 @@ function IncomingInspectionTable({
       <div className="overflow-auto max-h-[600px]">
         <table className="w-full caption-bottom text-sm">
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+            <TableRow className="bg-muted">
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('date')}>
                   Date
                   {sortConfig?.key === 'date' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">Batch</TableHead>
-              <TableHead className="w-[80px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Batch</TableHead>
+              <TableHead className="w-[80px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('item')}>
                   Item
                   {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">Mould</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Mould</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('lot_no')}>
                   Lot No
                   {sortConfig?.key === 'lot_no' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[100px] sticky top-0 bg-muted/50 z-10">Deflasher</TableHead>
-              <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50 z-10">Sent</TableHead>
-              <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50 z-10">Recv</TableHead>
-              <TableHead className="w-[60px] text-right sticky top-0 bg-muted/50 z-10">Diff%</TableHead>
-              <TableHead className="w-[100px] sticky top-0 bg-muted/50 z-10">
+              <TableHead className="w-[100px] sticky top-0 bg-muted z-10">Deflasher</TableHead>
+              <TableHead className="w-[70px] text-right sticky top-0 bg-muted z-10">Sent</TableHead>
+              <TableHead className="w-[70px] text-right sticky top-0 bg-muted z-10">Recv</TableHead>
+              <TableHead className="w-[60px] text-right sticky top-0 bg-muted z-10">Diff%</TableHead>
+              <TableHead className="w-[100px] sticky top-0 bg-muted z-10">
                 <Button variant="ghost" size="sm" className="-ml-3 h-7 text-xs" onClick={() => handleSort('inspector_name')}>
                   Inspector
                   {sortConfig?.key === 'inspector_name' ? (sortConfig.direction === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />) : (<ArrowUpDown className="ml-1 h-3 w-3" />)}
                 </Button>
               </TableHead>
-              <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50 z-10">Insp</TableHead>
-              <TableHead className="w-[70px] text-right sticky top-0 bg-muted/50 z-10">Rej</TableHead>
-              <TableHead className="w-[60px] text-right sticky top-0 bg-muted/50 z-10">Rej%</TableHead>
-              <TableHead className="w-[80px] text-right sticky top-0 bg-muted/50 z-10">Cost</TableHead>
-              <TableHead className="w-[80px] sticky top-0 bg-muted/50 z-10">Status</TableHead>
-              <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">Action</TableHead>
+              <TableHead className="w-[70px] text-right sticky top-0 bg-muted z-10">Insp</TableHead>
+              <TableHead className="w-[70px] text-right sticky top-0 bg-muted z-10">Rej</TableHead>
+              <TableHead className="w-[60px] text-right sticky top-0 bg-muted z-10">Rej%</TableHead>
+              <TableHead className="w-[80px] text-right sticky top-0 bg-muted z-10">Cost</TableHead>
+              <TableHead className="w-[80px] sticky top-0 bg-muted z-10">Status</TableHead>
+              <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Action</TableHead>
             </TableRow>
             {/* Filter Row */}
-            <TableRow className="bg-muted/30">
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-7 text-xs" />
+            <TableRow className="bg-muted border-t border-muted-foreground/10">
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.itemCode} onChange={(e) => handleFilterChange('itemCode', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-7 text-xs" />
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.lotNo} onChange={(e) => handleFilterChange('lotNo', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10">
-                <Input placeholder="Filter..." value={filters.operator} onChange={(e) => handleFilterChange('operator', e.target.value)} className="h-7 text-xs" />
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10">
+                <Input placeholder="Filter..." value={filters.operator} onChange={(e) => handleFilterChange('operator', e.target.value)} className="h-7 text-xs bg-background" />
               </TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
-              <TableHead className="sticky top-[41px] bg-muted/30 z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
+              <TableHead className="sticky top-[41px] bg-muted z-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

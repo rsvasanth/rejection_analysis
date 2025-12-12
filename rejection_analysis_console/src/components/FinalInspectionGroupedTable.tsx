@@ -175,26 +175,26 @@ export function FinalInspectionGroupedTable({
             <div className="overflow-auto max-h-[600px]">
                 <table className="w-full caption-bottom text-sm">
                     <TableHeader>
-                        <TableRow className="bg-muted/50">
-                            <TableHead className="w-[40px]"></TableHead>
-                            <TableHead className="w-[90px]">Date</TableHead>
-                            <TableHead className="w-[70px] truncate">Shift</TableHead>
-                            <TableHead className="w-[110px]">Operator</TableHead>
-                            <TableHead className="w-[50px]">Press</TableHead>
-                            <TableHead className="w-[80px]">Item</TableHead>
-                            <TableHead className="w-[90px]">Mould</TableHead>
-                            <TableHead className="w-[90px]">Lot No</TableHead>
-                            <TableHead className="w-[110px]">Trimming</TableHead>
-                            <TableHead className="w-[110px]">Inspector</TableHead>
-                            <TableHead className="w-[70px] text-center">Qty</TableHead>
-                            <TableHead className="w-[70px] text-center">Rej Qty</TableHead>
-                            <TableHead className="w-[70px] text-center">Patrol</TableHead>
-                            <TableHead className="w-[70px] text-center">Line</TableHead>
-                            <TableHead className="w-[70px] text-center">Lot</TableHead>
-                            <TableHead className="w-[70px] text-center">Final</TableHead>
-                            <TableHead className="w-[80px] text-right">Cost</TableHead>
-                            <TableHead className="w-[80px]">Status</TableHead>
-                            <TableHead className="w-[100px]">Action</TableHead>
+                        <TableRow className="bg-muted">
+                            <TableHead className="w-[40px] sticky top-0 bg-muted z-10"></TableHead>
+                            <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Date</TableHead>
+                            <TableHead className="w-[70px] truncate sticky top-0 bg-muted z-10">Shift</TableHead>
+                            <TableHead className="w-[110px] sticky top-0 bg-muted z-10">Operator</TableHead>
+                            <TableHead className="w-[50px] sticky top-0 bg-muted z-10">Press</TableHead>
+                            <TableHead className="w-[80px] sticky top-0 bg-muted z-10">Item</TableHead>
+                            <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Mould</TableHead>
+                            <TableHead className="w-[90px] sticky top-0 bg-muted z-10">Lot No</TableHead>
+                            <TableHead className="w-[110px] sticky top-0 bg-muted z-10">Trimming</TableHead>
+                            <TableHead className="w-[110px] sticky top-0 bg-muted z-10">Inspector</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Qty</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Rej Qty</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Patrol</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Line</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Lot</TableHead>
+                            <TableHead className="w-[70px] text-center sticky top-0 bg-muted z-10">Final</TableHead>
+                            <TableHead className="w-[80px] text-right sticky top-0 bg-muted z-10">Cost</TableHead>
+                            <TableHead className="w-[80px] sticky top-0 bg-muted z-10">Status</TableHead>
+                            <TableHead className="w-[100px] sticky top-0 bg-muted z-10">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
