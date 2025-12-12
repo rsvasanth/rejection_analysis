@@ -290,7 +290,7 @@ function InspectionRecordsTable({
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="overflow-auto max-h-[600px]">
-        <Table>
+        <table className="w-full caption-bottom text-sm">
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
@@ -432,7 +432,7 @@ function InspectionRecordsTable({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </table>
       </div>
     </div>
   )
@@ -547,7 +547,7 @@ function IncomingInspectionTable({
   return (
     <div className="rounded-md border">
       <div className="overflow-auto max-h-[600px]">
-        <Table>
+        <table className="w-full caption-bottom text-sm">
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="w-[90px] sticky top-0 bg-muted/50 z-10">
@@ -699,7 +699,7 @@ function IncomingInspectionTable({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </table>
       </div>
     </div>
   )

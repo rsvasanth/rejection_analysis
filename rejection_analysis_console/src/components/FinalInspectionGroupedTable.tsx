@@ -173,7 +173,7 @@ export function FinalInspectionGroupedTable({
     return (
         <div className="rounded-md border">
             <div className="overflow-auto max-h-[600px]">
-                <Table>
+                <table className="w-full caption-bottom text-sm">
                     <TableHeader>
                         <TableRow className="bg-muted/50">
                             <TableHead className="w-[40px]"></TableHead>
@@ -387,7 +387,7 @@ export function FinalInspectionGroupedTable({
                             )
                         })}
                     </TableBody>
-                </Table>
+                </table>
             </div>
         </div>
     )
