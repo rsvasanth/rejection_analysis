@@ -2166,6 +2166,20 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         # Get Inspection Entry document
         inspection = frappe.get_doc("Inspection Entry", inspection_entry_name)
         
+        # CONTEXT SWITCH: If requesting Patrol/Line but given Lot Inspection, find the correct document
+        if inspection_type in ['Patrol Inspection', 'Line Inspection'] and inspection.inspection_type == 'Lot Inspection':
+            lot_no = inspection.lot_no
+            # Find the linked Patrol/Line inspection for this lot
+            related_inspection = frappe.db.get_value("Inspection Entry", {
+                "lot_no": lot_no,
+                "inspection_type": inspection_type,
+                "docstatus": 1
+            }, "name")
+            
+            if related_inspection:
+                # Switch to the related inspection document
+                inspection = frappe.get_doc("Inspection Entry", related_inspection)
+        
         result = {
             "inspection_entry": inspection.name,
             "lot_no": inspection.lot_no or "N/A",

@@ -369,22 +369,22 @@ function InspectionRecordsTable({
                 <TableCell className="font-mono font-semibold text-xs">{record.lot_no}</TableCell>
                 <TableCell
                   className={`text-center text-xs ${getRejectionColor(record.patrol_rej_pct || 0)} cursor-pointer hover:underline`}
-                  onClick={() => onShowRejectionDetails(record.inspection_entry)}
-                  title="Click to see defect details"
+                  onClick={() => onShowRejectionDetails(record.inspection_entry, 'Patrol Inspection')}
+                  title="Click to see Patrol defect details"
                 >
                   {record.patrol_rej_pct !== undefined ? `${record.patrol_rej_pct.toFixed(1)}%` : '—'}
                 </TableCell>
                 <TableCell
                   className={`text-center text-xs ${getRejectionColor(record.line_rej_pct || 0)} cursor-pointer hover:underline`}
-                  onClick={() => onShowRejectionDetails(record.inspection_entry)}
-                  title="Click to see defect details"
+                  onClick={() => onShowRejectionDetails(record.inspection_entry, 'Line Inspection')}
+                  title="Click to see Line defect details"
                 >
                   {record.line_rej_pct !== undefined ? `${record.line_rej_pct.toFixed(1)}%` : '—'}
                 </TableCell>
                 <TableCell
                   className={`text-center text-xs ${getRejectionColor(record.lot_rej_pct || record.rej_pct || 0)} cursor-pointer hover:underline`}
-                  onClick={() => onShowRejectionDetails(record.inspection_entry)}
-                  title="Click to see defect details"
+                  onClick={() => onShowRejectionDetails(record.inspection_entry, 'Lot Inspection')}
+                  title="Click to see Lot defect details"
                 >
                   <span className="font-bold">
                     {(record.lot_rej_pct !== undefined ? record.lot_rej_pct : record.rej_pct !== undefined ? record.rej_pct : null) !== null
