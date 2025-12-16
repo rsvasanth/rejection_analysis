@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Bar, BarChart, Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 import {
     ChartConfig,
     ChartContainer,
@@ -723,11 +723,11 @@ function CostAnalysisPage() {
                                         config={{
                                             production_value: {
                                                 label: "Production Value",
-                                                color: "hsl(var(--chart-1))",
+                                                color: "#2563eb",
                                             },
                                             rejection_cost: {
                                                 label: "Rejection Cost",
-                                                color: "hsl(var(--chart-2))",
+                                                color: "#ef4444",
                                             },
                                         } satisfies ChartConfig}
                                         className="aspect-auto h-[350px] w-full"
@@ -760,17 +760,17 @@ function CostAnalysisPage() {
                                                 cursor={false}
                                                 content={
                                                     <ChartTooltipContent
-                                                        labelFormatter={(value) => {
+                                                        labelFormatter={(value: any) => {
                                                             try {
                                                                 const date = new Date(value)
-                                                                if (isNaN(date.getTime())) return value
+                                                                if (isNaN(date.getTime())) return String(value)
                                                                 return date.toLocaleDateString("en-US", {
                                                                     month: "short",
                                                                     day: "numeric",
                                                                     year: "numeric"
                                                                 })
                                                             } catch (e) {
-                                                                return value
+                                                                return String(value)
                                                             }
                                                         }}
                                                         formatter={(value) => formatCurrency(Number(value))}
@@ -782,13 +782,11 @@ function CostAnalysisPage() {
                                                 dataKey="production_value"
                                                 fill="var(--color-production_value)"
                                                 radius={[4, 4, 0, 0]}
-                                                stackId="a"
                                             />
                                             <Bar
                                                 dataKey="rejection_cost"
                                                 fill="var(--color-rejection_cost)"
                                                 radius={[4, 4, 0, 0]}
-                                                stackId="a"
                                             />
                                             <ChartLegend content={<ChartLegendContent />} />
                                         </BarChart>
