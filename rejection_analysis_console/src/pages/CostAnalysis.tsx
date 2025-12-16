@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Bar, BarChart, Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import {
     ChartConfig,
     ChartContainer,
@@ -732,69 +732,10 @@ function CostAnalysisPage() {
                                         } satisfies ChartConfig}
                                         className="aspect-auto h-[350px] w-full"
                                     >
-                                        <AreaChart
-                                            data={(() => {
-                                                // Group data by date and calculate values
-                                                const dateMap = new Map<string, { production_value: number; rejection_cost: number }>()
-
-                                                // Add production values from moulding data
-                                                mouldingData.forEach(item => {
-                                                    const date = item.moulding_date
-                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
-                                                    dateMap.set(date, {
-                                                        ...current,
-                                                        production_value: current.production_value + (item.production_value || 0)
-                                                    })
-                                                })
-
-                                                // Add rejection costs from all rejection data
-                                                lotRejectionData.forEach(item => {
-                                                    const date = item.lot_no.substring(0, 10) // Extract date from lot number
-                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
-                                                    dateMap.set(date, {
-                                                        ...current,
-                                                        rejection_cost: current.rejection_cost + (item.rejection_cost || 0)
-                                                    })
-                                                })
-
-                                                incomingData.forEach(item => {
-                                                    const date = item.inspection_date
-                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
-                                                    dateMap.set(date, {
-                                                        ...current,
-                                                        rejection_cost: current.rejection_cost + (item.df_vendor_cost || 0)
-                                                    })
-                                                })
-
-                                                fviData.forEach(item => {
-                                                    const date = item.inspection_date
-                                                    const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
-                                                    dateMap.set(date, {
-                                                        ...current,
-                                                        rejection_cost: current.rejection_cost + (item.total_fvi_cost || 0)
-                                                    })
-                                                })
-
-                                                // Convert to array and sort by date
-                                                return Array.from(dateMap.entries())
-                                                    .map(([date, values]) => ({
-                                                        date,
-                                                        production_value: values.production_value,
-                                                        rejection_cost: values.rejection_cost
-                                                    }))
-                                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                                            })()}
+                                        <BarChart
+                                            data={chartData}
+                                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                                         >
-                                            <defs>
-                                                <linearGradient id="fillProductionValue" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="var(--color-production_value)" stopOpacity={0.8} />
-                                                    <stop offset="95%" stopColor="var(--color-production_value)" stopOpacity={0.1} />
-                                                </linearGradient>
-                                                <linearGradient id="fillRejectionCost" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="var(--color-rejection_cost)" stopOpacity={0.8} />
-                                                    <stop offset="95%" stopColor="var(--color-rejection_cost)" stopOpacity={0.1} />
-                                                </linearGradient>
-                                            </defs>
                                             <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.3} />
                                             <XAxis
                                                 dataKey="date"
@@ -833,26 +774,24 @@ function CostAnalysisPage() {
                                                             }
                                                         }}
                                                         formatter={(value) => formatCurrency(Number(value))}
-                                                        indicator="dot"
+                                                        indicator="dashed"
                                                     />
                                                 }
                                             />
-                                            <Area
-                                                dataKey="rejection_cost"
-                                                type="natural"
-                                                fill="url(#fillRejectionCost)"
-                                                stroke="var(--color-rejection_cost)"
+                                            <Bar
+                                                dataKey="production_value"
+                                                fill="var(--color-production_value)"
+                                                radius={[4, 4, 0, 0]}
                                                 stackId="a"
                                             />
-                                            <Area
-                                                dataKey="production_value"
-                                                type="natural"
-                                                fill="url(#fillProductionValue)"
-                                                stroke="var(--color-production_value)"
+                                            <Bar
+                                                dataKey="rejection_cost"
+                                                fill="var(--color-rejection_cost)"
+                                                radius={[4, 4, 0, 0]}
                                                 stackId="a"
                                             />
                                             <ChartLegend content={<ChartLegendContent />} />
-                                        </AreaChart>
+                                        </BarChart>
                                     </ChartContainer>
                                 )}
                             </CardContent>
