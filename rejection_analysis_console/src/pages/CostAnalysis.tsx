@@ -302,7 +302,8 @@ function CostAnalysisPage() {
         })
 
         lotRejectionData.forEach(item => {
-            const date = item.lot_no.substring(0, 10)
+            // Use inspection_date if available, otherwise try to extract from lot or use today
+            const date = item.inspection_date || item.lot_no.substring(0, 10)
             const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
             dateMap.set(date, {
                 ...current,
@@ -839,6 +840,88 @@ function CostAnalysisPage() {
                                         </AreaChart>
                                     </ChartContainer>
                                 )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Daily Trend Table */}
+                        <Card>
+                            <CardHeader className="py-3 border-b">
+                                <CardTitle className="text-lg">Daily Cost Analysis</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/50">
+                                            <TableHead className="w-[120px]">Date</TableHead>
+                                            <TableHead className="text-right">Production Value</TableHead>
+                                            <TableHead className="text-right">Rejection Cost</TableHead>
+                                            <TableHead className="text-right">Net Value</TableHead>
+                                            <TableHead className="text-right">COPQ %</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {chartData.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                                    No data available for the selected period
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            <>
+                                                {chartData.map((row) => {
+                                                    const netValue = row.production_value - row.rejection_cost
+                                                    const copq = row.production_value > 0 ? (row.rejection_cost / row.production_value) * 100 : 0
+
+                                                    return (
+                                                        <TableRow key={row.date} className="hover:bg-muted/50">
+                                                            <TableCell className="font-medium">{formatDate(row.date)}</TableCell>
+                                                            <TableCell className="text-right text-primary font-semibold">
+                                                                {formatCurrency(row.production_value)}
+                                                            </TableCell>
+                                                            <TableCell className="text-right text-destructive font-semibold">
+                                                                {formatCurrency(row.rejection_cost)}
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-semibold">
+                                                                {formatCurrency(netValue)}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${copq > 5 ? 'bg-red-100 text-red-700' :
+                                                                        copq > 2 ? 'bg-yellow-100 text-yellow-700' :
+                                                                            'bg-green-100 text-green-700'
+                                                                    }`}>
+                                                                    {copq.toFixed(2)}%
+                                                                </span>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
+                                                {/* Total Row */}
+                                                <TableRow className="bg-muted font-bold border-t-2 border-primary/20">
+                                                    <TableCell>Total</TableCell>
+                                                    <TableCell className="text-right text-primary">
+                                                        {formatCurrency(chartData.reduce((sum, r) => sum + r.production_value, 0))}
+                                                    </TableCell>
+                                                    <TableCell className="text-right text-destructive">
+                                                        {formatCurrency(chartData.reduce((sum, r) => sum + r.rejection_cost, 0))}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {formatCurrency(
+                                                            chartData.reduce((sum, r) => sum + r.production_value, 0) -
+                                                            chartData.reduce((sum, r) => sum + r.rejection_cost, 0)
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {(() => {
+                                                            const totalProd = chartData.reduce((sum, r) => sum + r.production_value, 0)
+                                                            const totalRej = chartData.reduce((sum, r) => sum + r.rejection_cost, 0)
+                                                            return totalProd > 0 ? ((totalRej / totalProd) * 100).toFixed(2) + '%' : '0.00%'
+                                                        })()}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </CardContent>
                         </Card>
                     </TabsContent>
