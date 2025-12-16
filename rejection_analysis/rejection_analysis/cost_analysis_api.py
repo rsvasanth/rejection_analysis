@@ -64,51 +64,52 @@ def fetch_remote_item_prices(item_codes):
     
     if not (remote_url and api_key and api_secret):
         return {}
+        
+    # Batch processing to avoid URL length limits
+    item_codes = list(set(item_codes))
+    chunk_size = 50
+    price_map = {}
     
-    try:
-        filters = [
-            ["item_code", "in", item_codes],
-            ["price_list", "=", "Standard Selling"]
-        ]
-        fields = ["item_code", "price_list_rate"]
-        
-        response = requests.get(
-            f"{remote_url}/api/resource/Item Price",
-            params={
-                "filters": json.dumps(filters),
-                "fields": json.dumps(fields),
-                "limit_page_length": 500
-            },
-            headers={
-                "Authorization": f"token {api_key}:{api_secret}"
-            },
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            price_map = {}
-            for item_price in data.get("data", []):
-                item_code = item_price.get("item_code")
-                rate = flt(item_price.get("price_list_rate", 0))
-                if item_code and rate > 0:
-                    price_map[item_code] = rate
-            return price_map
-        else:
-            error_text = response.text[:500] if response.text else "No response"
-            frappe.log_error(
-                f"Remote pricing API returned {response.status_code}: {error_text}",
-                "Cost Analysis Remote Pricing Error"
-            )
-            return {}
+    for i in range(0, len(item_codes), chunk_size):
+        chunk = item_codes[i:i + chunk_size]
+        try:
+            filters = [
+                ["item_code", "in", chunk],
+                ["price_list", "=", "Standard Selling"]
+            ]
+            fields = ["item_code", "price_list_rate"]
             
-    except requests.exceptions.Timeout:
-        frappe.log_error("Remote pricing API timeout", "Cost Analysis Timeout")
-        return {}
-    except Exception as e:
-        error_msg = str(e)[:300]
-        frappe.log_error(f"Remote pricing failed: {error_msg}", "Cost Analysis Pricing Error")
-        return {}
+            response = requests.get(
+                f"{remote_url}/api/resource/Item Price",
+                params={
+                    "filters": json.dumps(filters),
+                    "fields": json.dumps(fields),
+                    "limit_page_length": chunk_size
+                },
+                headers={
+                    "Authorization": f"token {api_key}:{api_secret}"
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                for item_price in data.get("data", []):
+                    item_code = item_price.get("item_code")
+                    rate = flt(item_price.get("price_list_rate", 0))
+                    if item_code and rate > 0:
+                        price_map[item_code] = rate
+            else:
+                 frappe.log_error(
+                    f"Remote pricing batch failed {response.status_code}", 
+                    "Cost Analysis Batch Error"
+                )
+                
+        except Exception as e:
+            frappe.log_error(f"Remote pricing batch error: {str(e)}", "Cost Analysis Batch Exception")
+            continue
+            
+    return price_map
 
 
 @frappe.whitelist()
@@ -355,8 +356,19 @@ def get_moulding_data(lot_numbers, work_planning_lots):
             row['plan_source'] = None
         
         # Get rate from remote pricing
+        # Get rate from remote pricing
         finished_code = t_to_f_map.get(material_code)
         rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        
+        # Fallback to local Item Price if remote pricing returns 0
+        if rate == 0 and material_code:
+            local_price = frappe.db.get_value(
+                'Item Price',
+                {'item_code': material_code, 'price_list': 'Standard Selling'},
+                'price_list_rate'
+            )
+            rate = flt(local_price) if local_price else 0
+            
         row['item_rate'] = rate
         
         # Calculate Production Value = Qty × Rate
@@ -416,8 +428,19 @@ def get_lot_rejection_data(lot_numbers):
         material_code = row.get('item_code')
         
         # Get rate from remote pricing
+        # Get rate from remote pricing
         finished_code = t_to_f_map.get(material_code)
         rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        
+        # Fallback to local Item Price if remote pricing returns 0
+        if rate == 0 and material_code:
+            local_price = frappe.db.get_value(
+                'Item Price',
+                {'item_code': material_code, 'price_list': 'Standard Selling'},
+                'price_list_rate'
+            )
+            rate = flt(local_price) if local_price else 0
+            
         row['item_rate'] = rate
         
         # Calculate Lot Rejection Cost = Rejected Qty × Rate
@@ -588,9 +611,20 @@ def get_fvi_data(lot_numbers):
         row['under_fill_qty'] = defects.get('under_fill', 0)
         
         # Get rate from remote pricing
+        # Get rate from remote pricing
         material_code = row.get('item_code')
         finished_code = t_to_f_map.get(material_code)
         rate = pricing_map.get(finished_code, 0) if finished_code else 0
+        
+        # Fallback to local Item Price if remote pricing returns 0
+        if rate == 0 and material_code:
+            local_price = frappe.db.get_value(
+                'Item Price',
+                {'item_code': material_code, 'price_list': 'Standard Selling'},
+                'price_list_rate'
+            )
+            rate = flt(local_price) if local_price else 0
+            
         row['item_rate'] = rate
         
         # Calculate trimming percentage and cost
