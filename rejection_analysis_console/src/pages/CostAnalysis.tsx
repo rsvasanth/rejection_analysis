@@ -294,6 +294,7 @@ function CostAnalysisPage() {
 
         mouldingData.forEach(item => {
             const date = item.moulding_date
+            if (!date) return
             const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
             dateMap.set(date, {
                 ...current,
@@ -302,8 +303,9 @@ function CostAnalysisPage() {
         })
 
         lotRejectionData.forEach(item => {
-            // Use inspection_date if available, otherwise try to extract from lot or use today
-            const date = item.inspection_date || item.lot_no.substring(0, 10)
+            // Strictly use inspection_date. Fallback to lot_no extract is unreliable (e.g. 5525.02.05)
+            const date = item.inspection_date
+            if (!date) return
             const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
             dateMap.set(date, {
                 ...current,
@@ -313,6 +315,7 @@ function CostAnalysisPage() {
 
         incomingData.forEach(item => {
             const date = item.inspection_date
+            if (!date) return
             const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
             dateMap.set(date, {
                 ...current,
@@ -322,6 +325,7 @@ function CostAnalysisPage() {
 
         fviData.forEach(item => {
             const date = item.inspection_date
+            if (!date) return
             const current = dateMap.get(date) || { production_value: 0, rejection_cost: 0 }
             dateMap.set(date, {
                 ...current,
@@ -799,11 +803,16 @@ function CostAnalysisPage() {
                                                 tickMargin={8}
                                                 minTickGap={32}
                                                 tickFormatter={(value) => {
-                                                    const date = new Date(value)
-                                                    return date.toLocaleDateString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                    })
+                                                    try {
+                                                        const date = new Date(value)
+                                                        if (isNaN(date.getTime())) return value
+                                                        return date.toLocaleDateString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                        })
+                                                    } catch (e) {
+                                                        return value
+                                                    }
                                                 }}
                                             />
                                             <ChartTooltip
@@ -811,11 +820,17 @@ function CostAnalysisPage() {
                                                 content={
                                                     <ChartTooltipContent
                                                         labelFormatter={(value) => {
-                                                            return new Date(value).toLocaleDateString("en-US", {
-                                                                month: "short",
-                                                                day: "numeric",
-                                                                year: "numeric"
-                                                            })
+                                                            try {
+                                                                const date = new Date(value)
+                                                                if (isNaN(date.getTime())) return value
+                                                                return date.toLocaleDateString("en-US", {
+                                                                    month: "short",
+                                                                    day: "numeric",
+                                                                    year: "numeric"
+                                                                })
+                                                            } catch (e) {
+                                                                return value
+                                                            }
                                                         }}
                                                         formatter={(value) => formatCurrency(Number(value))}
                                                         indicator="dot"
@@ -886,8 +901,8 @@ function CostAnalysisPage() {
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <span className={`px-2 py-1 rounded text-xs font-bold ${copq > 5 ? 'bg-red-100 text-red-700' :
-                                                                        copq > 2 ? 'bg-yellow-100 text-yellow-700' :
-                                                                            'bg-green-100 text-green-700'
+                                                                    copq > 2 ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-green-100 text-green-700'
                                                                     }`}>
                                                                     {copq.toFixed(2)}%
                                                                 </span>
