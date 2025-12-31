@@ -24,7 +24,7 @@ from frappe.utils import today, getdate, flt
 # ============================================================================
 
 @frappe.whitelist()
-def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
+def get_dashboard_metrics(date=None, inspection_type="Lot Inspection", from_date=None, to_date=None):
     """
     Get aggregated dashboard metrics for a specific date and inspection type.
     
@@ -69,8 +69,12 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     """
     
     # STEP 1: Validate input parameters
-    if not date:
-        date = today()
+    if from_date and to_date:
+        date_condition = "BETWEEN %s AND %s"
+        date_params = (from_date, to_date)
+    else:
+        date_condition = "= %s"
+        date_params = (date or today(),)
     
     # Initialize default result structure
     metrics = {
@@ -90,7 +94,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     # ========================================================================
     if inspection_type == "Lot Inspection":
         # 1. Get Completed Inspections (Source: Inspection Entry linked to MPE)
-        query = """
+        query = f"""
             SELECT 
                 ie.total_rejected_qty_in_percentage,
                 ie.total_inspected_qty_nos, 
@@ -100,9 +104,9 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
                 ON mpe.scan_lot_number = ie.lot_no
             WHERE ie.inspection_type = 'Lot Inspection'
             AND ie.docstatus = 1
-            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
         """
-        inspections = frappe.db.sql(query, (date,), as_dict=True)
+        inspections = frappe.db.sql(query, date_params, as_dict=True)
         
         # 2. Calculate Basic Metrics
         metrics["total_lots"] = len(inspections)
@@ -116,16 +120,16 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
 
         # 3. Calculate Patrol & Line Averages (Specific to Lot Inspection)
         for sub_type in ['Patrol Inspection', 'Line Inspection']:
-            sub_query = """
+            sub_query = f"""
                 SELECT AVG(ie.total_rejected_qty_in_percentage) as avg_rej
                 FROM `tabInspection Entry` ie
                 LEFT JOIN `tabMoulding Production Entry` mpe
                     ON mpe.scan_lot_number = ie.lot_no
                 WHERE ie.inspection_type = %s
                 AND ie.docstatus = 1
-                AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+                AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
             """
-            sub_result = frappe.db.sql(sub_query, (sub_type, date), as_dict=True)
+            sub_result = frappe.db.sql(sub_query, (sub_type,) + date_params, as_dict=True)
             avg_val = flt(sub_result[0].avg_rej) if sub_result and sub_result[0].avg_rej else 0.0
             
             if sub_type == 'Patrol Inspection':
@@ -134,10 +138,10 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
                 metrics["line_rej_avg"] = avg_val
 
         # 4. Calculate Pending Lots (Produced today but not inspected)
-        pending_query = """
+        pending_query = f"""
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
-            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
             AND NOT EXISTS (
                 SELECT 1 FROM `tabInspection Entry` ie 
                 WHERE ie.lot_no = mpe.scan_lot_number 
@@ -145,7 +149,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
                 AND ie.docstatus = 1
             )
         """
-        pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
+        pending_result = frappe.db.sql(pending_query, date_params, as_dict=True)
         metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
 
     # ========================================================================
@@ -153,7 +157,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     # ========================================================================
     elif inspection_type == "Incoming Inspection":
         # 1. Get Completed Inspections (Source: Inspection Entry directly)
-        query = """
+        query = f"""
             SELECT 
                 ie.total_rejected_qty_in_percentage,
                 ie.total_inspected_qty_nos, 
@@ -161,9 +165,9 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
             FROM `tabInspection Entry` ie
             WHERE ie.inspection_type = 'Incoming Inspection'
             AND ie.docstatus = 1
-            AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') = %s
+            AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') {date_condition}
         """
-        inspections = frappe.db.sql(query, (date,), as_dict=True)
+        inspections = frappe.db.sql(query, date_params, as_dict=True)
         
         # 2. Calculate Basic Metrics
         metrics["total_lots"] = len(inspections)
@@ -179,10 +183,10 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
         # Note: This is harder to calculate by "Inspection Date" since pending ones don't have an inspection date yet.
         # We will assume "Pending" means lots received from deflasher TODAY but not inspected.
         # Or simpler: Lots produced today that need incoming inspection (reverting to production date for pending context)
-        pending_query = """
+        pending_query = f"""
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
-            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
             AND NOT EXISTS (
                 SELECT 1 FROM `tabInspection Entry` ie 
                 WHERE ie.lot_no = mpe.scan_lot_number 
@@ -190,7 +194,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
                 AND ie.docstatus = 1
             )
         """
-        pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
+        pending_result = frappe.db.sql(pending_query, date_params, as_dict=True)
         metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
 
     # ========================================================================
@@ -198,7 +202,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
     # ========================================================================
     elif inspection_type == "Final Visual Inspection":
         # 1. Get Completed Inspections (Source: SPP Inspection Entry)
-        query = """
+        query = f"""
             SELECT 
                 spp_ie.total_rejected_qty_in_percentage,
                 spp_ie.total_inspected_qty_nos, 
@@ -206,9 +210,9 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
             FROM `tabSPP Inspection Entry` spp_ie
             WHERE spp_ie.inspection_type = 'Final Visual Inspection'
             AND spp_ie.docstatus = 1
-            AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') = %s
+            AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') {date_condition}
         """
-        inspections = frappe.db.sql(query, (date,), as_dict=True)
+        inspections = frappe.db.sql(query, date_params, as_dict=True)
         
         # 2. Calculate Basic Metrics
         metrics["total_lots"] = len(inspections)
@@ -226,10 +230,10 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
         ])
         
         # 3. Calculate Pending Lots (Produced today but not final inspected)
-        pending_query = """
+        pending_query = f"""
             SELECT COUNT(DISTINCT mpe.scan_lot_number) as pending_count
             FROM `tabMoulding Production Entry` mpe
-            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            WHERE DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
             AND NOT EXISTS (
                 SELECT 1 FROM `tabSPP Inspection Entry` spp_ie 
                 WHERE SUBSTRING_INDEX(spp_ie.lot_no, '-', 1) = mpe.scan_lot_number 
@@ -237,7 +241,7 @@ def get_dashboard_metrics(date=None, inspection_type="Lot Inspection"):
                 AND spp_ie.docstatus = 1
             )
         """
-        pending_result = frappe.db.sql(pending_query, (date,), as_dict=True)
+        pending_result = frappe.db.sql(pending_query, date_params, as_dict=True)
         metrics["pending_lots"] = int(flt(pending_result[0].pending_count)) if pending_result else 0
 
     # Round all float values
@@ -717,15 +721,24 @@ def get_lot_inspection_report(filters=None):
     if not filters:
         filters = {}
     
-    date = filters.get("production_date", today())
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    production_date = filters.get("production_date")
+    
+    if from_date and to_date:
+        date_condition = "BETWEEN %s AND %s"
+        date_params = (from_date, to_date)
+    else:
+        date_condition = "= %s"
+        date_params = (production_date or today(),)
     
     # STEP 1.5: FETCH WORK PLANNING LOTS FIRST (OEE dashboard pattern)
     # This avoids Cartesian product by doing TWO separate queries
-    work_plan_query = """
+    work_plan_query = f"""
         SELECT DISTINCT wpi.lot_number
         FROM `tabWork Planning` wp
         INNER JOIN `tabWork Plan Item` wpi ON wpi.parent = wp.name
-        WHERE wp.date = %s
+        WHERE wp.date {date_condition}
         AND wp.docstatus = 1
         AND wpi.lot_number IS NOT NULL
         AND wpi.lot_number != ''
@@ -735,13 +748,13 @@ def get_lot_inspection_report(filters=None):
         SELECT DISTINCT awpi.lot_number
         FROM `tabAdd On Work Planning` awp
         INNER JOIN `tabAdd On Work Plan Item` awpi ON awpi.parent = awp.name
-        WHERE awp.date = %s
+        WHERE awp.date {date_condition}
         AND awp.docstatus = 1
         AND awpi.lot_number IS NOT NULL
         AND awpi.lot_number != ''
     """
     
-    work_plan_lots = frappe.db.sql(work_plan_query, (date, date), as_dict=False)
+    work_plan_lots = frappe.db.sql(work_plan_query, date_params * 2, as_dict=False)
     work_plan_lot_numbers = [lot[0] for lot in work_plan_lots] if work_plan_lots else []
     
     # STEP 2: Build SQL query
@@ -836,12 +849,12 @@ def get_lot_inspection_report(filters=None):
         params = []
     else:
         # No Work Planning - fallback to empty result or moulding_date
-        query += """
+        query += f"""
             WHERE ie.inspection_type = 'Lot Inspection'
             AND ie.docstatus = 1
-            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') = %s
+            AND DATE_FORMAT(mpe.moulding_date, '%%Y-%%m-%%d') {date_condition}
         """
-        params = [date]
+        params = list(date_params)
     
     # STEP 3: Apply additional filters dynamically
     conditions = []
@@ -983,12 +996,21 @@ def get_incoming_inspection_report(filters=None):
     if not filters:
         filters = {}
     
-    date = filters.get("date", today())
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    date = filters.get("date")
+    
+    if from_date and to_date:
+        date_condition = "BETWEEN %s AND %s"
+        date_params = (from_date, to_date)
+    else:
+        date_condition = "= %s"
+        date_params = (date or today(),)
     
     # STEP 2: Build SQL query
     # REFACTORED: Start from Inspection Entry as primary source
     # Use LEFT JOIN to MPE for context data (operator, mould, production date)
-    query = """
+    query = f"""
         SELECT DISTINCT
             -- Inspection Entry fields (PRIMARY SOURCE)
             ie.posting_date AS date,
@@ -1051,11 +1073,11 @@ def get_incoming_inspection_report(filters=None):
         
         WHERE ie.inspection_type = 'Incoming Inspection'
         AND ie.docstatus = 1
-        AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') = %s
+        AND DATE_FORMAT(ie.posting_date, '%%Y-%%m-%%d') {date_condition}
     """
     
     # STEP 3: Apply additional filters dynamically
-    params = [date]
+    params = list(date_params)
     conditions = []
     
     if filters.get("item"):
@@ -1193,16 +1215,21 @@ def get_final_inspection_report(filters=None):
         }
     """
     
-    # STEP 1: Parse filters
-    if not filters:
-        filters = {}
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    date = filters.get("date")
     
-    date = filters.get("date", today())
+    if from_date and to_date:
+        date_condition = "BETWEEN %s AND %s"
+        date_params = (from_date, to_date)
+    else:
+        date_condition = "= %s"
+        date_params = (date or today(),)
     
     # STEP 2: Build SQL query
     # REFACTORED: Start from SPP Inspection Entry as primary source
     # Use LEFT JOIN to MPE for context data (operator, mould, production date)
-    query = """
+    query = f"""
         SELECT DISTINCT
             -- SPP Inspection Entry fields (PRIMARY SOURCE)
             spp_ie.posting_date AS inspection_date,
@@ -1316,11 +1343,11 @@ def get_final_inspection_report(filters=None):
         
         WHERE spp_ie.inspection_type = 'Final Visual Inspection'
         AND spp_ie.docstatus = 1
-        AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') = %s
+        AND DATE_FORMAT(spp_ie.posting_date, '%%Y-%%m-%%d') {date_condition}
     """
     
     # STEP 3: Apply additional filters dynamically
-    params = [date]
+    params = list(date_params)
     conditions = []
     
     if filters.get("shift_type"):
@@ -1576,7 +1603,7 @@ def update_car(car_name, car_data):
 
 
 @frappe.whitelist()
-def get_pending_cars_for_date(report_date, threshold_percentage=5.0):
+def get_pending_cars_for_date(report_date=None, threshold_percentage=5.0, from_date=None, to_date=None):
     """
     Get SUMMARY of CAR status for a specific date.
     Returns counts only - no full records to avoid duplicates.
@@ -1607,10 +1634,21 @@ def get_pending_cars_for_date(report_date, threshold_percentage=5.0):
         incoming_summary = {"total_exceeding_threshold": 0, "cars_filled": 0, "cars_pending": 0}
         final_summary = {"total_exceeding_threshold": 0, "cars_filled": 0, "cars_pending": 0}
         
+        # Prepare filters for reports
+        report_filters = {}
+        if from_date and to_date:
+            report_filters = {"from_date": from_date, "to_date": to_date}
+        else:
+            report_filters = {"date": report_date or today()}
+            
         # =====================================================================
         # LOT INSPECTIONS SUMMARY
         # =====================================================================
-        lot_report = get_lot_inspection_report(filters={"production_date": report_date})
+        lot_filters = report_filters.copy()
+        if "date" in lot_filters:
+            lot_filters["production_date"] = lot_filters.pop("date")
+            
+        lot_report = get_lot_inspection_report(filters=lot_filters)
         
         for record in lot_report:
             if record.get("lot_rej_pct", 0) >= threshold:
@@ -1633,7 +1671,7 @@ def get_pending_cars_for_date(report_date, threshold_percentage=5.0):
         # =====================================================================
         # INCOMING INSPECTIONS SUMMARY
         # =====================================================================
-        incoming_report = get_incoming_inspection_report(filters={"date": report_date})
+        incoming_report = get_incoming_inspection_report(filters=report_filters)
         
         for record in incoming_report:
             if record.get("rej_pct", 0) >= threshold:
@@ -1655,7 +1693,7 @@ def get_pending_cars_for_date(report_date, threshold_percentage=5.0):
         # =====================================================================
         # FINAL VISUAL INSPECTIONS SUMMARY
         # =====================================================================
-        final_report = get_final_inspection_report(filters={"date": report_date})
+        final_report = get_final_inspection_report(filters=report_filters)
         
         for record in final_report:
             if record.get("final_insp_rej_pct", 0) >= threshold:
@@ -2607,4 +2645,64 @@ def get_machine_performance_chart(days=30, limit=15):
             "avg_rejection_pct": round(flt(row.get("avg_rejection_pct", 0)), 2),
             "critical_count": int(row.get("critical_count", 0))
         })
+    return results
+
+@frappe.whitelist()
+def get_meta_report_trend(from_date=None, to_date=None):
+    """
+    Get daily trend metrics for Meta Report:
+    - OEE %
+    - Total Capacity Utilisation %
+    - Lot Rejection %
+    - Planned vs Produced
+    """
+    from smart_screens.smart_screens.page.oee_dashboard.oee_dashboard import get_oee_summary
+    from frappe.utils import getdate, add_days, date_diff, today
+    
+    if not from_date:
+        from_date = add_days(today(), -7)
+    if not to_date:
+        to_date = today()
+        
+    start_date = getdate(from_date)
+    end_date = getdate(to_date)
+    
+    # Calculate number of days
+    days_count = date_diff(end_date, start_date) + 1
+    
+    results = []
+    
+    # Process each day in the range
+    for i in range(days_count):
+        current_date = add_days(start_date, i)
+        date_str = str(current_date)
+        
+        try:
+            # Get OEE summary for this date
+            summary = get_oee_summary(production_date=date_str)
+            
+            results.append({
+                "date": date_str,
+                "oee_pct": flt(summary.get('avg_oee', 0), 2),
+                "capacity_utilisation_pct": flt(summary.get('capacity_utilisation_pct', 0), 2),
+                "rejection_pct": flt(summary.get('overall_rejection_pct', 0), 2),
+                "planned_qty": flt(summary.get('total_planned_qty', 0), 2),
+                "produced_qty": flt(summary.get('total_produced_qty', 0), 2),
+                "efficiency_pct": flt(summary.get('production_efficiency_pct', 0), 2),
+                "utilisation_hours": flt(summary.get('total_utilisation_hours', 0), 2)
+            })
+        except Exception as e:
+            # Log error and continue with zeros for this day
+            frappe.log_error(f"Error fetching OEE summary for {date_str}: {str(e)}", "Meta Report API")
+            results.append({
+                "date": date_str,
+                "oee_pct": 0,
+                "capacity_utilisation_pct": 0,
+                "rejection_pct": 0,
+                "planned_qty": 0,
+                "produced_qty": 0,
+                "efficiency_pct": 0,
+                "utilisation_hours": 0
+            })
+            
     return results

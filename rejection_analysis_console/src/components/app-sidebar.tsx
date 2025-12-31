@@ -36,6 +36,16 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Batch Analysis",
+      url: "/batch-rejection-analysis",
+      icon: IconChartBar,
+    },
+    {
+      title: "Meta Report",
+      url: "/meta-report",
+      icon: IconFileAnalytics,
+    },
+    {
       title: "Performance",
       url: "/performance-rankings",
       icon: IconChartBar,
