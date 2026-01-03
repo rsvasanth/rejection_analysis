@@ -2693,9 +2693,9 @@ def get_meta_report_trend(from_date=None, to_date=None):
                 "oee_pct": flt(oee_summary.get('avg_oee', 0), 2),
                 "capacity_utilisation_pct": flt(oee_summary.get('capacity_utilisation_pct', 0), 2),
                 "rejection_pct": flt(rej_summary.get('avg_lot_rej_pct', 0), 2),
-                "planned_qty": flt(pva_summary.get('total_planned_records', 0), 2), 
-                "produced_qty": flt(pva_summary.get('total_produced_records', 0), 2),
-                "efficiency_pct": flt(pva_summary.get('production_efficiency_percentage', 0), 2),
+                "planned_qty": flt(oee_summary.get('total_planned_qty', 0), 2), 
+                "produced_qty": flt(oee_summary.get('total_produced_qty', 0), 2),
+                "efficiency_pct": flt(oee_summary.get('production_efficiency_pct', 0), 2),
                 "utilisation_hours": flt(oee_summary.get('total_utilisation_hours', 0), 2)
             })
         except Exception as e:
