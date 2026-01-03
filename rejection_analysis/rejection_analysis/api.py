@@ -2651,12 +2651,13 @@ def get_machine_performance_chart(days=30, limit=15):
 def get_meta_report_trend(from_date=None, to_date=None):
     """
     Get daily trend metrics for Meta Report:
-    - OEE %
-    - Total Capacity Utilisation %
-    - Lot Rejection %
-    - Planned vs Produced
+    - OEE % and Capacity Util: from OEE Dashboard
+    - Lot Rejection %: from Rejection Analysis Report
+    - Planned vs Produced: from Planned vs Produced Report
     """
     from smart_screens.smart_screens.page.oee_dashboard.oee_dashboard import get_oee_summary
+    from smart_screens.smart_screens.page.rejection_analysis_report.rejection_analysis_report import get_rejection_summary
+    from smart_screens.smart_screens.page.planned_vs_actual_production.planned_vs_actual_production import get_summary_statistics
     from frappe.utils import getdate, add_days, date_diff, today
     
     if not from_date:
@@ -2678,22 +2679,28 @@ def get_meta_report_trend(from_date=None, to_date=None):
         date_str = str(current_date)
         
         try:
-            # Get OEE summary for this date
-            summary = get_oee_summary(production_date=date_str)
+            # 1. Get OEE summary from OEE Dashboard
+            oee_summary = get_oee_summary(production_date=date_str)
+            
+            # 2. Get Rejection summary from Rejection Analysis Report
+            rej_summary = get_rejection_summary(production_date=date_str)
+            
+            # 3. Get Production vs Plan summary
+            pva_summary = get_summary_statistics(from_date=date_str, to_date=date_str)
             
             results.append({
                 "date": date_str,
-                "oee_pct": flt(summary.get('avg_oee', 0), 2),
-                "capacity_utilisation_pct": flt(summary.get('capacity_utilisation_pct', 0), 2),
-                "rejection_pct": flt(summary.get('overall_rejection_pct', 0), 2),
-                "planned_qty": flt(summary.get('total_planned_qty', 0), 2),
-                "produced_qty": flt(summary.get('total_produced_qty', 0), 2),
-                "efficiency_pct": flt(summary.get('production_efficiency_pct', 0), 2),
-                "utilisation_hours": flt(summary.get('total_utilisation_hours', 0), 2)
+                "oee_pct": flt(oee_summary.get('avg_oee', 0), 2),
+                "capacity_utilisation_pct": flt(oee_summary.get('capacity_utilisation_pct', 0), 2),
+                "rejection_pct": flt(rej_summary.get('avg_lot_rej_pct', 0), 2),
+                "planned_qty": flt(pva_summary.get('total_planned_records', 0), 2), 
+                "produced_qty": flt(pva_summary.get('total_produced_records', 0), 2),
+                "efficiency_pct": flt(pva_summary.get('production_efficiency_percentage', 0), 2),
+                "utilisation_hours": flt(oee_summary.get('total_utilisation_hours', 0), 2)
             })
         except Exception as e:
             # Log error and continue with zeros for this day
-            frappe.log_error(f"Error fetching OEE summary for {date_str}: {str(e)}", "Meta Report API")
+            frappe.log_error(f"Error fetching Meta Report data for {date_str}: {str(e)}", "Meta Report API")
             results.append({
                 "date": date_str,
                 "oee_pct": 0,
