@@ -171,8 +171,8 @@ export function FinalInspectionGroupedTable({
     }
 
     return (
-        <div className="rounded-md border">
-            <div className="overflow-auto max-h-[600px]">
+        <div className="rounded-md border w-full overflow-hidden">
+            <div className="overflow-auto w-full max-h-[600px]">
                 <table className="w-full caption-bottom text-sm">
                     <TableHeader>
                         <TableRow className="bg-muted">

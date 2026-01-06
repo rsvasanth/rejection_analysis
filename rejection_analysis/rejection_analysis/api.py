@@ -2194,18 +2194,22 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
     """
     try:
         # Determine which doctype to query
-        if inspection_type == "SPP Inspection Entry" or not frappe.db.exists("Inspection Entry", inspection_entry_name):
+        inspection_type_clean = str(inspection_type).strip()
+        if inspection_type_clean == "SPP Inspection Entry" or not frappe.db.exists("Inspection Entry", inspection_entry_name):
             # Try SPP Inspection Entry
             if frappe.db.exists("SPP Inspection Entry", inspection_entry_name):
                 return _get_spp_rejection_details(inspection_entry_name)
             else:
-                frappe.throw(f"Inspection Entry {inspection_entry_name} not found")
+                return {"error": f"Inspection Entry {inspection_entry_name} not found"}
         
         # Get Inspection Entry document
         inspection = frappe.get_doc("Inspection Entry", inspection_entry_name)
         
         # CONTEXT SWITCH: If requesting Patrol/Line but given Lot Inspection, find the correct document
-        if inspection_type in ['Patrol Inspection', 'Line Inspection'] and inspection.inspection_type == 'Lot Inspection':
+        inspection_type_lower = str(inspection_type).strip().lower()
+        parent_type_lower = str(inspection.inspection_type).strip().lower() if inspection.inspection_type else ""
+        
+        if inspection_type_lower in ['patrol inspection', 'line inspection'] and 'lot' in parent_type_lower:
             lot_no = inspection.lot_no
             # Find the linked Patrol/Line inspection for this lot
             related_inspection = frappe.db.get_value("Inspection Entry", {
@@ -2229,17 +2233,12 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
         parent_inspection_type = inspection.inspection_type or ""
         parent_total_inspected = int(flt(inspection.total_inspected_qty_nos or 0))
         
-        # Fallback: If total_inspected is 0 but we have rejection data, try to calculate
         if parent_total_inspected == 0:
             total_rejected = int(flt(inspection.total_rejected_qty or 0))
             rejection_pct = flt(inspection.total_rejected_qty_in_percentage or 0)
             if total_rejected > 0 and rejection_pct > 0:
                 # Calculate: inspected = rejected / (rejection% / 100)
                 parent_total_inspected = int(total_rejected / (rejection_pct / 100))
-                frappe.log_error(
-                    f"Calculated total_inspected ({parent_total_inspected}) from rejected ({total_rejected}) and % ({rejection_pct})",
-                    "Inspection Total Fallback"
-                )
         
         patrol_defects = []
         line_defects = []
@@ -2256,10 +2255,12 @@ def get_inspection_rejection_details(inspection_entry_name, inspection_type="Ins
             
             # Try different field names for rejected qty
             rejected_qty = 0
-            for field in ['rejected_qty', 'rejected_quantity', 'qty_rejected', 'rejection_qty']:
+            for field in ['rejected_qty', 'rejected_quantity', 'qty_rejected', 'rejection_qty', 'total_rejected_qty']:
                 if hasattr(item, field):
-                    rejected_qty = int(flt(getattr(item, field) or 0))
-                    break
+                    val = getattr(item, field)
+                    if val:
+                        rejected_qty = int(flt(val))
+                        break
             
             # Skip if no rejection
             if rejected_qty == 0:
@@ -2416,7 +2417,6 @@ def _get_spp_rejection_details(spp_inspection_entry_name):
         for possible_name in ['items', 'defect_details', 'inspection_details', 'quality_inspection_details']:
             if hasattr(inspection, possible_name) and getattr(inspection, possible_name):
                 child_table = getattr(inspection, possible_name)
-                frappe.log_error(f"Found child table: {possible_name}", "SPP Child Table Detection")
                 break
         
         if child_table:
@@ -2711,5 +2711,70 @@ def get_meta_report_trend(from_date=None, to_date=None):
                 "efficiency_pct": 0,
                 "utilisation_hours": 0
             })
+            
+    return results
+
+
+@frappe.whitelist()
+def get_batch_rejection_details(inspection_entries=None):
+    """
+    Get rejection details for multiple inspection entries efficiently.
+    """
+    if not inspection_entries:
+        return {}
+    
+    if isinstance(inspection_entries, str):
+        try:
+            import json
+            inspection_entries = json.loads(inspection_entries)
+        except Exception:
+            inspection_entries = [e.strip() for e in inspection_entries.split(',') if e.strip()]
+    
+    if not isinstance(inspection_entries, list):
+        return {}
+    
+    results = {}
+    
+    # Process in batches of 20 to avoid extreme query size but keep it fast
+    for i in range(0, len(inspection_entries), 20):
+        batch = inspection_entries[i:i+20]
+        for entry_name in batch:
+            try:
+                # We use the existing function for now for correctness
+                # but with cached documents if needed.
+                details = get_inspection_rejection_details(entry_name)
+                
+                if details and details.get('stages'):
+                    all_defects = []
+                    defect_summary = {}
+                    
+                    for stage in details['stages']:
+                        stage_name = stage.get('stage_name', 'Unknown')
+                        stage_defects = []
+                        
+                        for defect in stage.get('defects', []):
+                            d_type = defect.get('defect_type', 'Unknown')
+                            all_defects.append(d_type)
+                            stage_defects.append({
+                                'type': d_type,
+                                'qty': defect.get('rejected_qty', 0),
+                                'pct': defect.get('percentage', 0)
+                            })
+                        
+                        defect_summary[stage_name] = {
+                            'total_inspected': stage.get('total_inspected', 0),
+                            'total_rejected': stage.get('total_rejected', 0),
+                            'rejection_pct': stage.get('rejection_percentage', 0),
+                            'defects': stage_defects
+                        }
+                    
+                    results[entry_name] = {
+                        'lot_no': details.get('lot_no', ''),
+                        'defect_types': ', '.join(set(all_defects)) if all_defects else '',
+                        'defect_summary': frappe.as_json(defect_summary) if defect_summary else ''
+                    }
+            except Exception as e:
+                frappe.log_error(f"Error in batch fetch for {entry_name}: {str(e)}", "Batch Rejection Details")
+                results[entry_name] = {'lot_no': '', 'defect_types': '', 'defect_summary': ''}
             
     return results

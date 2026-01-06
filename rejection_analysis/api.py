@@ -31,6 +31,7 @@ from rejection_analysis.rejection_analysis.api import (
     generate_comprehensive_daily_report,
     get_all_daily_reports,
     get_inspection_rejection_details,
+    get_batch_rejection_details,
     # Chart Data APIs
     get_defect_distribution_chart,
     get_rejection_trend_chart,
@@ -58,6 +59,7 @@ __all__ = [
     'generate_comprehensive_daily_report',
     'get_all_daily_reports',
     'get_inspection_rejection_details',
+    'get_batch_rejection_details',
     # Chart Data APIs
     'get_defect_distribution_chart',
     'get_rejection_trend_chart',
@@ -66,3 +68,4 @@ __all__ = [
     'get_machine_performance_chart',
     'get_meta_report_trend'
 ]
+

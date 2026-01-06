@@ -289,8 +289,8 @@ function InspectionRecordsTable({
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="overflow-auto max-h-[600px]">
+    <div className="border rounded-lg overflow-hidden w-full">
+      <div className="overflow-auto w-full max-h-[600px]">
         <table className="w-full caption-bottom text-sm">
           <TableHeader>
             <TableRow className="bg-muted">
@@ -546,8 +546,8 @@ function IncomingInspectionTable({
   }
 
   return (
-    <div className="rounded-md border">
-      <div className="overflow-auto max-h-[600px]">
+    <div className="rounded-md border w-full overflow-hidden">
+      <div className="overflow-auto w-full max-h-[600px]">
         <table className="w-full caption-bottom text-sm">
           <TableHeader>
             <TableRow className="bg-muted">
@@ -877,111 +877,207 @@ function BatchRejectionAnalysisPage() {
   }, [fromDate, toDate])
 
   const handleExportLot = () => {
-    const headerMap = {
-      production_date: 'Date',
-      shift_type: 'Shift',
-      operator_name: 'Operator',
-      press_number: 'Press',
-      item_code: 'Item',
-      mould_ref: 'Mould',
-      lot_no: 'Lot',
-      patrol_rej_pct: 'Patrol %',
-      line_rej_pct: 'Line %',
-      lot_rej_pct: 'Lot %',
-      total_rejection_cost: 'Cost (INR)'
+    try {
+      if (lotRecords.length === 0) {
+        toast.error('No Lot records found for the selected period')
+        return
+      }
+      toast.info(`Exporting ${lotRecords.length} Lot records...`)
+      const headerMap = {
+        production_date: 'Date',
+        shift_type: 'Shift',
+        operator_name: 'Operator',
+        press_number: 'Press',
+        item_code: 'Item',
+        mould_ref: 'Mould',
+        lot_no: 'Lot',
+        patrol_rej_pct: 'Patrol %',
+        line_rej_pct: 'Line %',
+        lot_rej_pct: 'Lot %',
+        total_rejection_cost: 'Cost (INR)'
+      }
+      exportToCSV(lotRecords, `lot_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
+      toast.success('Lot export successful')
+    } catch (error) {
+      console.error('Error exporting Lot data:', error)
+      toast.error('Export failed. Check console for details.')
     }
-    exportToCSV(lotRecords, `lot_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
   }
 
   const handleExportIncoming = () => {
-    const headerMap = {
-      date: 'Date',
-      item: 'Item',
-      lot_no: 'Lot',
-      deflasher_name: 'Deflasher',
-      qty_sent: 'Qty Sent',
-      qty_received: 'Qty Recv',
-      insp_qty: 'Insp Qty',
-      rej_qty: 'Rej Qty',
-      rej_pct: 'Rej %',
-      rejection_cost: 'Cost (INR)'
+    try {
+      if (incomingRecords.length === 0) {
+        toast.error('No Incoming records found for the selected period')
+        return
+      }
+      toast.info(`Exporting ${incomingRecords.length} Incoming records...`)
+      const headerMap = {
+        date: 'Date',
+        item: 'Item',
+        lot_no: 'Lot',
+        deflasher_name: 'Deflasher',
+        qty_sent: 'Qty Sent',
+        qty_received: 'Qty Recv',
+        insp_qty: 'Insp Qty',
+        rej_qty: 'Rej Qty',
+        rej_pct: 'Rej %',
+        rejection_cost: 'Cost (INR)'
+      }
+      exportToCSV(incomingRecords, `incoming_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
+      toast.success('Incoming export successful')
+    } catch (error) {
+      console.error('Error exporting Incoming data:', error)
+      toast.error('Export failed. Check console for details.')
     }
-    exportToCSV(incomingRecords, `incoming_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
   }
 
   const handleExportFinal = () => {
-    const headerMap = {
-      inspection_date: 'Date',
-      item: 'Item',
-      lot_no: 'Lot',
-      final_insp_qty: 'Final Insp Qty',
-      final_rej_qty: 'Final Rej Qty',
-      patrol_rej_pct: 'Patrol %',
-      line_rej_pct: 'Line %',
-      lot_rej_pct: 'Lot %',
-      final_insp_rej_pct: 'Final %',
-      fvi_rejection_cost: 'Cost (INR)'
+    try {
+      if (finalRecords.length === 0) {
+        toast.error('No Final records found for the selected period')
+        return
+      }
+      toast.info(`Exporting ${finalRecords.length} Final records...`)
+      const headerMap = {
+        inspection_date: 'Date',
+        item: 'Item',
+        lot_no: 'Lot',
+        final_insp_qty: 'Final Insp Qty',
+        final_rej_qty: 'Final Rej Qty',
+        patrol_rej_pct: 'Patrol %',
+        line_rej_pct: 'Line %',
+        lot_rej_pct: 'Lot %',
+        final_insp_rej_pct: 'Final %',
+        fvi_rejection_cost: 'Cost (INR)'
+      }
+      exportToCSV(finalRecords, `final_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
+      toast.success('Final export successful')
+    } catch (error) {
+      console.error('Error exporting Final data:', error)
+      toast.error('Export failed. Check console for details.')
     }
-    exportToCSV(finalRecords, `final_inspection_batch_${fromDate}_to_${toDate}`, headerMap)
   }
 
 
-  const handleCombinedExport = () => {
+  const handleCombinedExport = async () => {
     if (lotRecords.length === 0 && incomingRecords.length === 0 && finalRecords.length === 0) {
       toast.error('No data available to export')
       return
     }
 
-    // Combine all records into a single dataset with a 'Source' column
+    toast.info('Fetching rejection details for export...')
+
+    // Collect unique inspection entry names
+    const allEntryNames: string[] = Array.from(new Set([
+      ...lotRecords.map(r => r.inspection_entry).filter(Boolean),
+      ...incomingRecords.map(r => r.inspection_entry).filter(Boolean),
+      ...finalRecords.map(r => r.spp_inspection_entry).filter(Boolean)
+    ]))
+
+    // Fetch rejection details for all entries
+    let rejectionDetails: Record<string, any> = {}
+    if (allEntryNames.length > 0) {
+      // Fetch rejection details in chunks to avoid server limits (like CharacterLengthExceededError)
+      const chunkSize = 50
+      for (let i = 0; i < allEntryNames.length; i += chunkSize) {
+        const chunk = allEntryNames.slice(i, i + chunkSize)
+        const currentBatch = Math.floor(i / chunkSize) + 1
+        const totalBatches = Math.ceil(allEntryNames.length / chunkSize)
+
+        toast.loading(`Fetching defect details (Batch ${currentBatch}/${totalBatches})...`, {
+          id: 'fetch-defects'
+        })
+
+        try {
+          const result = await call.post('rejection_analysis.api.get_batch_rejection_details', {
+            inspection_entries: chunk
+          })
+          const chunkDetails = result?.message || result || {}
+          Object.assign(rejectionDetails, chunkDetails)
+        } catch (err) {
+          console.error(`Error in batch ${currentBatch}:`, err)
+        }
+      }
+
+      const detailCount = Object.keys(rejectionDetails).length
+      if (detailCount === 0) {
+        toast.warning(`No defect details found for the ${allEntryNames.length} entries`, { id: 'fetch-defects' })
+      } else {
+        toast.success(`Defect data fetched for ${detailCount} of ${allEntryNames.length} entries`, { id: 'fetch-defects' })
+      }
+    }
+
+    // Combine all records into a single dataset with rejection details
+    // 4. Identify all unique defect types across all records to create dynamic columns
+    const allDefectTypes = new Set<string>();
+    Object.values(rejectionDetails).forEach((detail: any) => {
+      let summary = detail.defect_summary;
+      if (typeof summary === 'string' && summary.trim()) {
+        try { summary = JSON.parse(summary); } catch (e) { summary = null; }
+      }
+      if (summary && typeof summary === 'object') {
+        Object.values(summary).forEach((stage: any) => {
+          if (stage.defects && Array.isArray(stage.defects)) {
+            stage.defects.forEach((d: any) => {
+              if (d.type) allDefectTypes.add(d.type);
+            });
+          }
+        });
+      }
+    });
+
+    const defectTypesSorted = Array.from(allDefectTypes).sort();
+
+    // 5. Build Final Combined Data
     const combinedData: any[] = []
 
-    lotRecords.forEach(r => {
-      combinedData.push({
-        source: 'Lot Inspection',
-        date: r.production_date,
-        item: r.item_code,
-        lot_no: r.lot_no,
-        shift: r.shift_type || '',
-        press: r.press_number || '',
-        inspected: '', // Lot inspection records in this view don't have total_qty directly available in the same way? Wait, I should check the interfaces.
-        rejected: '',
-        rej_pct: r.lot_rej_pct || 0,
-        cost: r.total_rejection_cost || 0
-      })
-    })
+    const processRecord = (r: any, source: string, entryKey: string) => {
+      const details = rejectionDetails[r[entryKey]] || {}
+      let summary = details.defect_summary;
+      if (typeof summary === 'string' && summary.trim()) {
+        try { summary = JSON.parse(summary); } catch (e) { summary = null; }
+      }
 
-    incomingRecords.forEach(r => {
-      combinedData.push({
-        source: 'Incoming Inspection',
-        date: r.date,
-        item: r.item,
+      const row: any = {
+        source,
+        entry_id: r[entryKey],
+        date: r.production_date || r.date || r.inspection_date,
+        item: r.item_code || r.item,
         lot_no: r.lot_no,
-        shift: '',
-        press: '',
-        inspected: r.insp_qty || 0,
-        rejected: r.rej_qty || 0,
-        rej_pct: r.rej_pct || 0,
-        cost: r.rejection_cost || 0
-      })
-    })
+        shift: r.shift_type || r.shift,
+        press: r.press_number || r.press,
+        inspected: r.inspected_qty_nos || r.insp_qty || r.final_insp_qty,
+        rejected: r.total_rejected_qty || r.rej_qty || r.final_rej_qty,
+        rej_pct: r.lot_rej_pct || r.rej_pct || r.final_insp_rej_pct,
+        cost: r.total_rejection_cost || r.rejection_cost || r.fvi_rejection_cost || 0,
+        defect_types_list: details.defect_types || ''
+      }
 
-    finalRecords.forEach(r => {
-      combinedData.push({
-        source: 'Final Visual Inspection',
-        date: r.inspection_date,
-        item: r.item,
-        lot_no: r.lot_no,
-        shift: r.shift_type || '',
-        press: r.press_number || '',
-        inspected: r.final_insp_qty || 0,
-        rejected: r.final_rej_qty || 0,
-        rej_pct: r.final_insp_rej_pct || 0,
-        cost: r.fvi_rejection_cost || 0
-      })
-    })
+      // Initialize all defect columns to 0
+      defectTypesSorted.forEach(dt => { row[dt] = 0; })
 
-    const headerMap = {
+      // Fill in defect quantities
+      if (summary && typeof summary === 'object') {
+        Object.values(summary).forEach((stage: any) => {
+          if (stage.defects && Array.isArray(stage.defects)) {
+            stage.defects.forEach((d: any) => {
+              if (d.type) {
+                row[d.type] = (row[d.type] || 0) + (d.qty || 0);
+              }
+            });
+          }
+        });
+      }
+      return row;
+    }
+
+    lotRecords.forEach(r => combinedData.push(processRecord(r, 'Lot Inspection', 'inspection_entry')));
+    incomingRecords.forEach(r => combinedData.push(processRecord(r, 'Incoming Inspection', 'inspection_entry')));
+    finalRecords.forEach(r => combinedData.push(processRecord(r, 'Final Visual Inspection', 'spp_inspection_entry')));
+
+    const headerMap: Record<string, string> = {
       source: 'Source',
+      entry_id: 'Entry ID',
       date: 'Date',
       item: 'Item',
       lot_no: 'Lot No',
@@ -990,11 +1086,17 @@ function BatchRejectionAnalysisPage() {
       inspected: 'Inspected Qty',
       rejected: 'Rejected Qty',
       rej_pct: 'Rejection %',
-      cost: 'Cost (INR)'
+      cost: 'Cost (INR)',
+      defect_types_list: 'Defect Types (List)'
     }
 
+    // Dynamic Defect Columns
+    defectTypesSorted.forEach(dt => {
+      headerMap[dt] = dt;
+    })
+
     exportToCSV(combinedData, `combined_rejection_analysis_${fromDate}_to_${toDate}`, headerMap)
-    toast.success('Combined report exported successfully')
+    toast.success('Combined report with rejection details exported successfully')
   }
 
   const generateAllReports = async () => {
@@ -1067,13 +1169,13 @@ function BatchRejectionAnalysisPage() {
   return (
     <DashboardLayout>
       <SiteHeader />
-      <div className="flex flex-1 flex-col gap-6 p-4 bg-muted/30">
+      <div className="flex flex-1 flex-col gap-6 p-4 bg-muted/30 w-full max-w-full overflow-x-hidden">
         {/* Header Section - Consolidated */}
         <Card className="border-2 shadow-sm">
           <CardContent className="py-1 px-4">
-            <div className="flex items-start justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
               {/* Title & Report Info */}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold tracking-tight">Batch Rejection Analysis</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Quality insights and inspection metrics for selected date range
@@ -1081,7 +1183,7 @@ function BatchRejectionAnalysisPage() {
               </div>
 
               {/* Controls Section */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Date Selection */}
                 <div className="flex items-end gap-3 px-3 py-2 rounded-lg bg-muted/50">
                   <div className="grid items-center gap-1">
@@ -1090,7 +1192,7 @@ function BatchRejectionAnalysisPage() {
                       type="date"
                       value={fromDate}
                       onChange={(e) => setFromDate(e.target.value)}
-                      className="h-8 w-34 py-0 text-xs"
+                      className="h-8 w-28 py-0 text-xs"
                     />
                   </div>
                   <div className="grid items-center gap-1">
@@ -1099,7 +1201,7 @@ function BatchRejectionAnalysisPage() {
                       type="date"
                       value={toDate}
                       onChange={(e) => setToDate(e.target.value)}
-                      className="h-8 w-34 py-0 text-xs"
+                      className="h-8 w-28 py-0 text-xs"
                     />
                   </div>
                 </div>
@@ -1109,7 +1211,7 @@ function BatchRejectionAnalysisPage() {
                   onClick={generateAllReports}
                   disabled={loading}
                   size="default"
-                  className="gap-2 h-10 px-6"
+                  className="gap-2 h-9 px-4"
                 >
                   {loading ? (
                     <>
@@ -1130,7 +1232,7 @@ function BatchRejectionAnalysisPage() {
                     onClick={handleCombinedExport}
                     variant="outline"
                     size="default"
-                    className="gap-2 h-10 px-6"
+                    className="gap-2 h-9 px-4"
                   >
                     <Download className="h-4 w-4 text-primary" />
                     Combined Export
@@ -1320,7 +1422,7 @@ function BatchRejectionAnalysisPage() {
             {/* Centered Metrics Bar */}
             <Card className="border shadow-sm">
               <CardContent className="py-2 px-4">
-                <div className="flex items-center justify-center gap-6">
+                <div className="flex flex-wrap items-center justify-center gap-4 py-1">
                   {/* Total & Pending */}
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center">
@@ -1409,7 +1511,7 @@ function BatchRejectionAnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full overflow-hidden border shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1442,7 +1544,7 @@ function BatchRejectionAnalysisPage() {
             {/* Centered Metrics Bar */}
             <Card className="border shadow-sm">
               <CardContent className="py-2 px-4">
-                <div className="flex items-center justify-center gap-8">
+                <div className="flex flex-wrap items-center justify-center gap-4 py-1">
                   {/* Total & Pending */}
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-md bg-purple-100 flex items-center justify-center">
@@ -1493,7 +1595,7 @@ function BatchRejectionAnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full overflow-hidden border shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1526,7 +1628,7 @@ function BatchRejectionAnalysisPage() {
             {/* Centered Metrics Bar */}
             <Card className="border shadow-sm">
               <CardContent className="py-2 px-4">
-                <div className="flex items-center justify-center gap-8">
+                <div className="flex flex-wrap items-center justify-center gap-4 py-1">
                   {/* Total Lots */}
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-md bg-green-100 flex items-center justify-center">
@@ -1573,7 +1675,7 @@ function BatchRejectionAnalysisPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full overflow-hidden border shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
