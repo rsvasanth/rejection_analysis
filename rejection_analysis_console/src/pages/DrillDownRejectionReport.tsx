@@ -291,9 +291,9 @@ const DrillDownRejectionReport: React.FC = () => {
                 title="Drill Down Rejection Report"
                 description="Analyze rejection patterns across products, lots, and sublots."
             />
-            {/* Hardened container: Removed max-w-[100vw] to stay within SidebarInset flow */}
-            <div className="flex-1 space-y-4 p-4 md:p-6 pb-20 w-full overflow-x-hidden border-t">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Hardened container: Added min-w-0 and overflow-hidden to prevent body-level horizontal scroll */}
+            <div className="flex-1 min-w-0 space-y-4 p-4 md:p-6 pb-20 w-full border-t overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-slate-900 px-1">Phase 1 Report</h1>
                         <p className="text-muted-foreground mt-0.5 text-xs px-1">
