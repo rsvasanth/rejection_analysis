@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import sppLogo from "@/assets/spp-logo.png"
 
 interface SiteHeaderProps {
   title?: string
@@ -23,7 +24,7 @@ export function SiteHeader({ title = "Rejection Analysis Dashboard", description
         <div className="ml-auto flex items-center gap-4">
           {actions && <div className="flex items-center gap-2">{actions}</div>}
           <img
-            src="/spp-logo.png"
+            src={sppLogo}
             alt="Shree Polymer Products"
             className="h-12 object-contain"
             style={{ imageRendering: 'crisp-edges' }}
