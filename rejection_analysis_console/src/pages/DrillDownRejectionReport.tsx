@@ -287,69 +287,72 @@ const DrillDownRejectionReport: React.FC = () => {
 
     return (
         <DashboardLayout>
-            <SiteHeader title="Drill Down Rejection Report" description="Analyze rejection patterns across products, lots, and sublots." />
-            {/* Added container padding to avoid sidebar collision */}
-            <div className="space-y-6 p-6 pb-20 max-w-[100vw] overflow-hidden">
-                <div className="flex items-center justify-between">
+            <SiteHeader
+                title="Drill Down Rejection Report"
+                description="Analyze rejection patterns across products, lots, and sublots."
+            />
+            {/* Hardened container: Removed max-w-[100vw] to stay within SidebarInset flow */}
+            <div className="flex-1 space-y-4 p-4 md:p-6 pb-20 w-full overflow-x-hidden border-t">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Phase 1 Report</h1>
-                        <p className="text-muted-foreground mt-1 text-sm">
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900 px-1">Phase 1 Report</h1>
+                        <p className="text-muted-foreground mt-0.5 text-xs px-1">
                             Traceability and Pivot analysis
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => activeTab === 'pivot' ? fetchPivotData() : fetchStandardData()}>
-                            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        <Button variant="outline" size="sm" onClick={() => activeTab === 'pivot' ? fetchPivotData() : fetchStandardData()} className="h-8">
+                            <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                             Refresh
                         </Button>
-                        <Button variant="outline" size="sm" onClick={handleExport}>
-                            <Download className="mr-2 h-4 w-4" />
+                        <Button variant="outline" size="sm" onClick={handleExport} className="h-8">
+                            <Download className="mr-2 h-3.5 w-3.5" />
                             Export
                         </Button>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <Card className="border-slate-200 shadow-sm">
+                <Card className="border-slate-200 shadow-sm bg-white overflow-visible">
                     <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label htmlFor="fromDate" className="text-xs font-semibold">From Date</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="fromDate" className="text-[10px] uppercase tracking-wider font-bold text-slate-500">From Date</Label>
                                 <Input
                                     id="fromDate"
                                     type="date"
-                                    className="h-9 px-3"
+                                    className="h-9 px-3 text-xs bg-slate-50/50"
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="toDate" className="text-xs font-semibold">To Date</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="toDate" className="text-[10px] uppercase tracking-wider font-bold text-slate-500">To Date</Label>
                                 <Input
                                     id="toDate"
                                     type="date"
-                                    className="h-9 px-3"
+                                    className="h-9 px-3 text-xs bg-slate-50/50"
                                     value={toDate}
                                     onChange={(e) => setToDate(e.target.value)}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="itemCode" className="text-xs font-semibold">Item Code</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="itemCode" className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Item Code</Label>
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                                     <Input
                                         id="itemCode"
                                         placeholder="Search item code..."
-                                        className="pl-8 h-9"
+                                        className="pl-8 h-9 text-xs bg-slate-50/50"
                                         value={itemCode}
                                         onChange={(e) => setItemCode(e.target.value)}
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="inspectionType" className="text-xs font-semibold">Inspection Type</Label>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="inspectionType" className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Inspection Type</Label>
                                 <Select value={inspectionType} onValueChange={setInspectionType}>
-                                    <SelectTrigger id="inspectionType" className="h-9">
+                                    <SelectTrigger id="inspectionType" className="h-9 text-xs bg-slate-50/50">
                                         <SelectValue placeholder="All Types" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -362,8 +365,8 @@ const DrillDownRejectionReport: React.FC = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button className="w-full h-9" onClick={() => activeTab === 'pivot' ? fetchPivotData() : fetchStandardData()}>
-                                <Filter className="mr-2 h-4 w-4" />
+                            <Button className="w-full h-9 text-xs font-bold uppercase tracking-wide bg-slate-900" onClick={() => activeTab === 'pivot' ? fetchPivotData() : fetchStandardData()}>
+                                <Filter className="mr-2 h-3.5 w-3.5" />
                                 Apply Filters
                             </Button>
                         </div>
@@ -371,44 +374,44 @@ const DrillDownRejectionReport: React.FC = () => {
                 </Card>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="shadow-none border-slate-100 bg-slate-50/50">
-                        <CardHeader className="pb-1 py-3 px-4">
-                            <CardTitle className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Total Inspected</CardTitle>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <Card className="shadow-none border-slate-100 bg-white">
+                        <CardHeader className="pb-1 py-2 px-3">
+                            <CardTitle className="text-[9px] uppercase tracking-widest font-black text-slate-400">Total Inspected</CardTitle>
                         </CardHeader>
-                        <CardContent className="px-4 pb-3">
+                        <CardContent className="px-3 pb-3">
                             <div className="text-xl font-black text-slate-900">
                                 {pivotData?.summary.total_inspected.toLocaleString() || '0'}
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-none border-red-50 bg-red-50/10">
-                        <CardHeader className="pb-1 py-3 px-4">
-                            <CardTitle className="text-[11px] uppercase tracking-wider font-bold text-red-400">Total Rejected</CardTitle>
+                    <Card className="shadow-none border-red-50 bg-white">
+                        <CardHeader className="pb-1 py-2 px-3">
+                            <CardTitle className="text-[9px] uppercase tracking-widest font-black text-red-300">Total Rejected</CardTitle>
                         </CardHeader>
-                        <CardContent className="px-4 pb-3">
+                        <CardContent className="px-3 pb-3">
                             <div className="text-xl font-black text-red-600">
                                 {pivotData?.summary.total_rejected.toLocaleString() || '0'}
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-none border-slate-100 bg-slate-50/50">
-                        <CardHeader className="pb-1 py-3 px-4">
-                            <CardTitle className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Rejection Rate</CardTitle>
+                    <Card className="shadow-none border-slate-100 bg-white">
+                        <CardHeader className="pb-1 py-2 px-3">
+                            <CardTitle className="text-[9px] uppercase tracking-widest font-black text-slate-400">Rejection Rate</CardTitle>
                         </CardHeader>
-                        <CardContent className="px-4 pb-3">
-                            <div className="text-xl font-black text-slate-900">
+                        <CardContent className="px-3 pb-3">
+                            <div className="text-xl font-black text-slate-900 tabular-nums">
                                 {pivotData?.summary.total_inspected ?
                                     ((pivotData.summary.total_rejected / pivotData.summary.total_inspected) * 100).toFixed(2) : '0.00'}%
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="shadow-none border-slate-100 bg-slate-50/50">
-                        <CardHeader className="pb-1 py-3 px-4">
-                            <CardTitle className="text-[11px] uppercase tracking-wider font-bold text-slate-500">Products Tracked</CardTitle>
+                    <Card className="shadow-none border-slate-100 bg-white">
+                        <CardHeader className="pb-1 py-2 px-3">
+                            <CardTitle className="text-[9px] uppercase tracking-widest font-black text-slate-400">Products Tracked</CardTitle>
                         </CardHeader>
-                        <CardContent className="px-4 pb-3">
-                            <div className="text-xl font-black text-slate-900">
+                        <CardContent className="px-3 pb-3">
+                            <div className="text-xl font-black text-slate-900 tabular-nums">
                                 {pivotData?.summary.total_products || '0'}
                             </div>
                         </CardContent>
@@ -416,48 +419,47 @@ const DrillDownRejectionReport: React.FC = () => {
                 </div>
 
                 <Tabs defaultValue="pivot" onValueChange={setActiveTab}>
-                    <div className="flex items-center justify-between mb-2">
-                        <TabsList className="h-9">
-                            <TabsTrigger value="pivot" className="flex items-center gap-1.5 text-xs">
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-1">
+                        <TabsList className="h-9 bg-slate-100/50 p-1">
+                            <TabsTrigger value="pivot" className="flex items-center gap-1.5 text-[11px] uppercase font-bold tracking-tight">
                                 <BarChart2 className="h-3.5 w-3.5" />
                                 Hierarchical Pivot
                             </TabsTrigger>
-                            <TabsTrigger value="standard" className="flex items-center gap-1.5 text-xs">
+                            <TabsTrigger value="standard" className="flex items-center gap-1.5 text-[11px] uppercase font-bold tracking-tight">
                                 <TableIcon className="h-3.5 w-3.5" />
                                 Standard View
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    <TabsContent value="pivot" className="border border-slate-200 rounded-lg bg-white overflow-hidden shadow-md transition-shadow hover:shadow-lg">
+                    <TabsContent value="pivot" className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm mt-0">
                         <div className="overflow-x-auto">
-                            {/* Hardened Table structure with border-separate to avoid overlap gaps */}
                             <Table className="border-separate border-spacing-0 table-fixed w-full min-w-max bg-white">
-                                <TableHeader className="bg-slate-950 sticky top-0 z-40 border-b border-slate-800">
-                                    <TableRow className="hover:bg-slate-950 border-none">
+                                <TableHeader className="bg-slate-900 sticky top-0 z-40">
+                                    <TableRow className="hover:bg-slate-900 border-none">
                                         <TableHead
                                             style={{ left: 0, width: STICKY_COL_WIDTHS.product, minWidth: STICKY_COL_WIDTHS.product }}
-                                            className="text-white sticky top-0 z-50 border-r border-slate-800 shadow-[2px_0_4px_rgba(0,0,0,0.5)] bg-slate-950 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
+                                            className="text-white sticky top-0 z-50 border-r border-slate-800 shadow-[2px_0_4px_rgba(0,0,0,0.5)] bg-slate-900 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
                                         >
                                             Product
                                         </TableHead>
                                         <TableHead
                                             style={{ left: STICKY_COL_WIDTHS.product, width: STICKY_COL_WIDTHS.mainLot, minWidth: STICKY_COL_WIDTHS.mainLot }}
-                                            className="text-white sticky top-0 z-50 border-r border-slate-800 bg-slate-950 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
+                                            className="text-white sticky top-0 z-50 border-r border-slate-800 bg-slate-900 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
                                         >
                                             Main Lot
                                         </TableHead>
                                         <TableHead
                                             style={{ left: STICKY_COL_WIDTHS.product + STICKY_COL_WIDTHS.mainLot, width: STICKY_COL_WIDTHS.lotNo, minWidth: STICKY_COL_WIDTHS.lotNo }}
-                                            className="text-white sticky top-0 z-50 border-r border-slate-800 bg-slate-950 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
+                                            className="text-white sticky top-0 z-50 border-r border-slate-800 bg-slate-900 h-10 py-0 uppercase text-[10px] font-black tracking-widest"
                                         >
                                             Lot No
                                         </TableHead>
-                                        <TableHead className="w-[110px] min-w-[110px] text-white text-center uppercase text-[10px] font-black tracking-widest">Source</TableHead>
-                                        <TableHead className="w-[90px] min-w-[90px] text-white text-center uppercase text-[10px] font-black tracking-widest">Inspected</TableHead>
-                                        <TableHead className="w-[90px] min-w-[90px] text-white text-center uppercase text-[10px] font-black tracking-widest">Rejected</TableHead>
-                                        <TableHead className="w-[100px] min-w-[100px] text-white text-center uppercase text-[10px] font-black tracking-widest">Cost</TableHead>
-                                        <TableHead className="w-[70px] min-w-[70px] text-white text-center border-r border-slate-800 uppercase text-[10px] font-black tracking-widest">Rate</TableHead>
+                                        <TableHead className="w-[110px] min-w-[110px] text-white text-center uppercase text-[9px] font-black tracking-widest">Source</TableHead>
+                                        <TableHead className="w-[90px] min-w-[90px] text-white text-center uppercase text-[9px] font-black tracking-widest">Inspected</TableHead>
+                                        <TableHead className="w-[90px] min-w-[90px] text-white text-center uppercase text-[9px] font-black tracking-widest">Rejected</TableHead>
+                                        <TableHead className="w-[100px] min-w-[100px] text-white text-center uppercase text-[9px] font-black tracking-widest">Cost</TableHead>
+                                        <TableHead className="w-[70px] min-w-[70px] text-white text-center border-r border-slate-800 uppercase text-[9px] font-black tracking-widest">Rate</TableHead>
                                         {pivotData?.defect_columns.map(col => (
                                             <TableHead key={col} className="min-w-[60px] text-white text-center border-r border-slate-800 last:border-r-0 text-[10px] font-black">{col}</TableHead>
                                         ))}
@@ -466,35 +468,34 @@ const DrillDownRejectionReport: React.FC = () => {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center text-slate-400 font-medium">
+                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-32 text-center text-slate-400 font-medium">
                                                 Loading rejection data...
                                             </TableCell>
                                         </TableRow>
                                     ) : visibleRows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-32 text-center text-slate-400 italic">
+                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-40 text-center text-slate-400 italic">
                                                 No records found for the selected criteria.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         visibleRows.map((row) => {
-                                            // Determine explicit background color for sticky cells
                                             const bgColor = row.type === 'product' ? 'bg-slate-50' : 'bg-white';
 
                                             return (
                                                 <TableRow
                                                     key={row.id}
                                                     className={`
-                                                        ${row.type === 'product' ? 'bg-slate-50 font-bold border-t border-slate-200' : ''}
+                                                        ${row.type === 'product' ? 'bg-slate-50 font-bold' : ''}
                                                         ${row.type === 'main_lot' ? 'bg-white font-medium border-t border-slate-100' : ''}
                                                         ${row.type === 'sublot' ? 'bg-white text-[11px] text-slate-600' : ''}
                                                         group hover:bg-slate-100/30 transition-colors
                                                     `}
                                                 >
-                                                    {/* Product Column - Hardened Sticky */}
+                                                    {/* Product Column */}
                                                     <TableCell
                                                         style={{ left: 0, width: STICKY_COL_WIDTHS.product, minWidth: STICKY_COL_WIDTHS.product }}
-                                                        className={`sticky z-20 border-r border-slate-100 align-middle py-2 shadow-[1px_0_3px_rgba(0,0,0,0.03)] ${bgColor}`}
+                                                        className={`sticky z-20 border-r border-slate-100 align-middle py-2 ${bgColor}`}
                                                     >
                                                         <div className="flex items-center gap-2 overflow-hidden px-1">
                                                             {row.type === 'product' ? (
@@ -505,13 +506,13 @@ const DrillDownRejectionReport: React.FC = () => {
                                                                             <PlusSquare className="h-4 w-4" />
                                                                         }
                                                                     </button>
-                                                                    <span className="text-blue-700 font-black truncate">{row.product_code}</span>
+                                                                    <span className="text-blue-700 font-black truncate text-xs">{row.product_code}</span>
                                                                 </>
                                                             ) : null}
                                                         </div>
                                                     </TableCell>
 
-                                                    {/* Main Lot Column - Hardened Sticky */}
+                                                    {/* Main Lot Column */}
                                                     <TableCell
                                                         style={{ left: STICKY_COL_WIDTHS.product, width: STICKY_COL_WIDTHS.mainLot, minWidth: STICKY_COL_WIDTHS.mainLot }}
                                                         className={`sticky z-20 border-r border-slate-100 align-middle ${bgColor}`}
@@ -525,21 +526,21 @@ const DrillDownRejectionReport: React.FC = () => {
                                                                             <PlusSquare className="h-3.5 w-3.5" />
                                                                         }
                                                                     </button>
-                                                                    <span className="font-bold text-slate-700 truncate">{row.main_lot}</span>
+                                                                    <span className="font-bold text-slate-700 truncate text-[11px]">{row.main_lot}</span>
                                                                 </>
                                                             ) : null}
                                                         </div>
                                                     </TableCell>
 
-                                                    {/* Lot No Column - Hardened Sticky */}
+                                                    {/* Lot No Column */}
                                                     <TableCell
                                                         style={{ left: STICKY_COL_WIDTHS.product + STICKY_COL_WIDTHS.mainLot, width: STICKY_COL_WIDTHS.lotNo, minWidth: STICKY_COL_WIDTHS.lotNo }}
                                                         className={`sticky z-20 border-r border-slate-100 align-middle ${bgColor}`}
                                                     >
                                                         {row.type === 'sublot' ? (
                                                             <div className="flex flex-col min-w-0 pr-1 leading-none gap-0.5">
-                                                                <span className="font-bold text-slate-800 truncate">{row.lot_no}</span>
-                                                                <span className="text-[9px] text-slate-400 uppercase font-medium">{row.inspector}</span>
+                                                                <span className="font-bold text-slate-800 truncate text-[11px]">{row.lot_no}</span>
+                                                                <span className="text-[8px] text-slate-400 uppercase font-black truncate">{row.inspector}</span>
                                                             </div>
                                                         ) : null}
                                                     </TableCell>
@@ -547,27 +548,27 @@ const DrillDownRejectionReport: React.FC = () => {
                                                     {/* Source Badge */}
                                                     <TableCell className="text-center align-middle py-2">
                                                         {row.type === 'sublot' ? (
-                                                            <Badge variant="outline" className="text-[9px] py-0 h-4 px-1.5 bg-blue-50/50 text-blue-600 border-blue-100/50 whitespace-nowrap font-bold uppercase tracking-tight">
+                                                            <Badge variant="outline" className="text-[8px] py-0 h-4 px-1.5 bg-blue-50/50 text-blue-600 border-blue-100/50 whitespace-nowrap font-black uppercase tracking-tighter">
                                                                 {row.inspection_type?.replace(' Inspection', '').replace('Final Visual', 'FVI')}
                                                             </Badge>
                                                         ) : (
-                                                            <span className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">{row.type.replace('_', ' ')}</span>
+                                                            <span className="text-[8px] text-slate-300 font-black uppercase tracking-widest">{row.type.replace('_', ' ')}</span>
                                                         )}
                                                     </TableCell>
 
-                                                    <TableCell className="text-right tabular-nums font-medium text-slate-600 px-3">{row.inspected.toLocaleString()}</TableCell>
-                                                    <TableCell className="text-right tabular-nums font-black text-red-600 px-3">{row.rejected.toLocaleString()}</TableCell>
-                                                    <TableCell className="text-right tabular-nums text-[10px] font-bold text-slate-700 px-3 border-r border-slate-50">
+                                                    <TableCell className="text-right tabular-nums font-semibold text-slate-600 px-3 text-xs">{row.inspected.toLocaleString()}</TableCell>
+                                                    <TableCell className="text-right tabular-nums font-black text-red-600 px-3 text-xs">{row.rejected.toLocaleString()}</TableCell>
+                                                    <TableCell className="text-right tabular-nums text-[10px] font-bold text-slate-700 px-3">
                                                         {row.rejection_cost > 0 ? `₹${row.rejection_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
                                                     </TableCell>
-                                                    <TableCell className={`text-center tabular-nums border-r border-slate-50 font-black ${row.rate > 5 ? 'text-red-700' : 'text-slate-400'}`}>
+                                                    <TableCell className={`text-center tabular-nums border-r border-slate-50 font-black text-xs ${row.rate > 5 ? 'text-red-700' : 'text-slate-400'}`}>
                                                         {row.rate.toFixed(1)}%
                                                     </TableCell>
 
                                                     {pivotData?.defect_columns.map(col => {
                                                         const val = row[col] || 0
                                                         return (
-                                                            <TableCell key={col} className={`text-center tabular-nums border-r border-slate-50 last:border-r-0 ${getHeatmapColor(val)}`}>
+                                                            <TableCell key={col} className={`text-center tabular-nums border-r border-slate-50 last:border-r-0 text-xs ${getHeatmapColor(val)}`}>
                                                                 <span className={val > 0 ? 'font-bold' : ''}>{val || '-'}</span>
                                                             </TableCell>
                                                         )
@@ -581,60 +582,60 @@ const DrillDownRejectionReport: React.FC = () => {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="standard" className="border border-slate-200 rounded-lg bg-white overflow-hidden mt-4 shadow-sm">
+                    <TabsContent value="standard" className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm mt-0 transition-all">
                         <Table className="bg-white">
-                            <TableHeader className="bg-slate-50 border-b">
+                            <TableHeader className="bg-slate-50 border-b border-slate-100">
                                 <TableRow>
-                                    <TableHead className="uppercase text-[10px] font-black">Source</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Item Code</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Lot No</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Type</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Doc Name</TableHead>
-                                    <TableHead className="text-right uppercase text-[10px] font-black">Inspected</TableHead>
-                                    <TableHead className="text-right uppercase text-[10px] font-black">Rejected</TableHead>
-                                    <TableHead className="text-right uppercase text-[10px] font-black">Cost</TableHead>
-                                    <TableHead className="text-right uppercase text-[10px] font-black">Rate %</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Status</TableHead>
-                                    <TableHead className="uppercase text-[10px] font-black">Defects</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Source</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Item Code</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Lot No</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Type</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Doc Name</TableHead>
+                                    <TableHead className="text-right uppercase text-[9px] font-black tracking-widest text-slate-500">Inspected</TableHead>
+                                    <TableHead className="text-right uppercase text-[9px] font-black tracking-widest text-slate-500">Rejected</TableHead>
+                                    <TableHead className="text-right uppercase text-[9px] font-black tracking-widest text-slate-500">Cost</TableHead>
+                                    <TableHead className="text-right uppercase text-[9px] font-black tracking-widest text-slate-500">Rate%</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Status</TableHead>
+                                    <TableHead className="uppercase text-[9px] font-black tracking-widest text-slate-500">Defects</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={11} className="h-24 text-center">Loading data...</TableCell>
+                                        <TableCell colSpan={11} className="h-40 text-center text-slate-400">Loading data...</TableCell>
                                     </TableRow>
                                 ) : standardData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={11} className="h-24 text-center">No records found</TableCell>
+                                        <TableCell colSpan={11} className="h-40 text-center text-slate-400 italic">No records found</TableCell>
                                     </TableRow>
                                 ) : (
                                     standardData.map((row, idx) => (
-                                        <TableRow key={idx} className="hover:bg-slate-50 border-b border-slate-50 last:border-0 h-11">
+                                        <TableRow key={idx} className="hover:bg-slate-50/50 border-b border-slate-50 last:border-0 h-10">
                                             <TableCell>
-                                                <Badge variant="outline" className="text-[9px] bg-slate-50 font-bold uppercase tracking-tighter">
+                                                <Badge variant="outline" className="text-[8px] bg-slate-50/50 font-black uppercase tracking-tighter border-slate-200">
                                                     {row.source_type.split(' ')[0]}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="font-bold text-slate-900 truncate max-w-[120px]">{row.item_code}</TableCell>
-                                            <TableCell className="font-medium text-slate-700">{row.lot_no}</TableCell>
+                                            <TableCell className="font-bold text-slate-900 truncate max-w-[120px] text-xs">{row.item_code}</TableCell>
+                                            <TableCell className="font-semibold text-slate-700 text-xs">{row.lot_no}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="bg-blue-50/30 text-blue-800 border-blue-100/50 text-[10px]">
+                                                <Badge variant="outline" className="bg-blue-50/30 text-blue-800 border-blue-100/50 text-[9px] uppercase font-bold tracking-tight px-1.5 h-4">
                                                     {row.inspection_type}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-slate-400 text-[10px] font-mono">{row.document_name}</TableCell>
-                                            <TableCell className="text-right tabular-nums text-slate-600">{row.inspected_qty.toLocaleString()}</TableCell>
-                                            <TableCell className="text-right tabular-nums font-black text-red-600">{row.rejected_qty.toLocaleString()}</TableCell>
-                                            <TableCell className="text-right tabular-nums font-bold text-slate-700">
+                                            <TableCell className="text-slate-400 text-[9px] font-mono truncate max-w-[100px]">{row.document_name}</TableCell>
+                                            <TableCell className="text-right tabular-nums text-slate-600 text-xs">{row.inspected_qty.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right tabular-nums font-black text-red-600 text-xs">{row.rejected_qty.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right tabular-nums font-bold text-slate-700 text-xs">
                                                 {row.rejection_cost > 0 ? `₹${row.rejection_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
                                             </TableCell>
-                                            <TableCell className="text-right tabular-nums font-black">{row.rejection_percentage.toFixed(2)}%</TableCell>
+                                            <TableCell className="text-right tabular-nums font-black text-xs text-slate-800">{row.rejection_percentage.toFixed(1)}%</TableCell>
                                             <TableCell>
-                                                <Badge className={`${getQualityBadgeColor(row.quality_status)} text-white text-[10px] font-bold uppercase py-0 px-2 h-5`}>
+                                                <Badge className={`${getQualityBadgeColor(row.quality_status)} text-white text-[9px] font-black uppercase py-0 px-2 h-4 tracking-tighter`}>
                                                     {row.quality_status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="max-w-[150px] truncate text-[10px] text-slate-400 font-medium italic">
+                                            <TableCell className="max-w-[150px] truncate text-[9px] text-slate-400 font-medium italic">
                                                 {row.defect_details || '-'}
                                             </TableCell>
                                         </TableRow>
