@@ -38,7 +38,9 @@ from rejection_analysis.rejection_analysis.api import (
     get_stage_rejection_chart,
     get_operator_performance_chart,
     get_machine_performance_chart,
-    get_meta_report_trend
+    get_meta_report_trend,
+    get_drill_down_rejection_data,
+    get_drill_down_pivot_report
 )
 
 # Re-export all functions (this makes them accessible via rejection_analysis.api.*)
@@ -66,6 +68,8 @@ __all__ = [
     'get_stage_rejection_chart',
     'get_operator_performance_chart',
     'get_machine_performance_chart',
-    'get_meta_report_trend'
+    'get_meta_report_trend',
+    'get_drill_down_rejection_data',
+    'get_drill_down_pivot_report'
 ]
 

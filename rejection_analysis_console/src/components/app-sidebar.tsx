@@ -41,6 +41,11 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Drill Down Report",
+      url: "/drill-down-report",
+      icon: IconFileAnalytics,
+    },
+    {
       title: "Meta Report",
       url: "/meta-report",
       icon: IconFileAnalytics,

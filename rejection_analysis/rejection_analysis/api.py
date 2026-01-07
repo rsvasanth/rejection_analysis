@@ -16,8 +16,11 @@ Date: November 26, 2025
 """
 
 import frappe
+import json
+import re
+from datetime import datetime, timedelta
 from frappe import _
-from frappe.utils import today, getdate, flt
+from frappe.utils import today, getdate, flt, add_days, nowdate
 
 # ============================================================================
 # DASHBOARD METRICS API
@@ -2778,3 +2781,360 @@ def get_batch_rejection_details(inspection_entries=None):
                 results[entry_name] = {'lot_no': '', 'defect_types': '', 'defect_summary': ''}
             
     return results
+
+# ============================================================================
+# DRILL DOWN REJECTION REPORT APIs
+# ============================================================================
+
+def normalize_defect_type(defect_type):
+    """
+    Normalize defect types to their short codes for use as column headers
+    """
+    if not defect_type:
+        return "OTH"
+    
+    defect_upper = defect_type.upper().strip()
+    
+    # Defect (DT)
+    if "DEFECT" in defect_upper and not any(x in defect_upper for x in ["SURFACE", "STAIN"]):
+        return "DT"
+    
+    # Bend (BD)
+    if any(keyword in defect_upper for keyword in ["BEND", "BD"]):
+        return "BD"
+    
+    # Backrind (BK)
+    if any(keyword in defect_upper for keyword in ["BACKRIND", "BK"]):
+        return "BK"
+    
+    # Blister (BL)
+    if any(keyword in defect_upper for keyword in ["BLISTER", "BL"]) and "BUBBLE" not in defect_upper:
+        return "BL"
+    
+    # Black Mark (BM)
+    if any(keyword in defect_upper for keyword in ["BLACK MARK", "BM"]):
+        return "BM"
+    
+    # Bune (BN)
+    if any(keyword in defect_upper for keyword in ["BUNE", "BN"]):
+        return "BN"
+    
+    # Bonding (BO)
+    if any(keyword in defect_upper for keyword in ["BONDING", "BOND", "BO"]):
+        return "BO"
+    
+    # Bubble (BU)
+    if any(keyword in defect_upper for keyword in ["BUBBLE", "BU"]):
+        return "BU"
+    
+    # Cut Mark (CM)
+    if any(keyword in defect_upper for keyword in ["CUT MARK", "CM"]):
+        return "CM"
+    
+    # Colour Variation (CV)
+    if any(keyword in defect_upper for keyword in ["COLOUR VARIATION", "CV"]):
+        return "CV"
+    
+    # Deflash (DF)
+    if any(keyword in defect_upper for keyword in ["DEFLASH", "DF"]):
+        return "DF"
+    
+    # Depression (DP)
+    if any(keyword in defect_upper for keyword in ["DIPRESSION", "DP"]):
+        return "DP"
+    
+    # Flow (F)
+    if any(keyword in defect_upper for keyword in ["FLOW", "FL", " F "]) or defect_upper.endswith(" F"):
+        return "F"
+    
+    # Foreign Particle (FP)
+    if any(keyword in defect_upper for keyword in ["FOREIGN PARTICLE", "FP"]):
+        return "FP"
+    
+    # Surface Defect/Stain (SD)
+    if any(keyword in defect_upper for keyword in ["STAIN", "SURFACE DEFECT", "SD"]):
+        return "SD"
+    
+    # Shell Damage (SH)
+    if any(keyword in defect_upper for keyword in ["CELL", "SHELL", "DAMAGE", "SH"]):
+        return "SH"
+    
+    # Burst/Tear (T)
+    if any(keyword in defect_upper for keyword in ["BURST", "TEAR", " T "]) or defect_upper == "T":
+        return "T"
+    
+    # Tool Mark (TM)
+    if any(keyword in defect_upper for keyword in ["TOOL MARK", "TM"]):
+        return "TM"
+    
+    # Under Fill (UF)
+    if any(keyword in defect_upper for keyword in ["UNDER FILL", "UF"]):
+        return "UF"
+    
+    return "OTH"
+
+@frappe.whitelist()
+def get_drill_down_rejection_data(filters=None):
+    """
+    Get consolidated rejection data for 'Standard View'
+    """
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+    
+    if not filters:
+        filters = {}
+    
+    if not filters.get('from_date'):
+        filters['from_date'] = add_days(nowdate(), -30)
+    if not filters.get('to_date'):
+        filters['to_date'] = nowdate()
+    
+    try:
+        data = _get_unified_rejection_data(filters)
+        processed_data = _process_sublot_data(data)
+        return processed_data
+    except Exception as e:
+        frappe.log_error(f"Drill Down Report Error: {str(e)}", "Drill Down Report")
+        frappe.throw(_("Error fetching report data: {0}").format(str(e)))
+
+@frappe.whitelist()
+def get_drill_down_pivot_report(filters=None):
+    """
+    Get product-grouped pivot report with hierarchical structure
+    """
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+    
+    if not filters:
+        filters = {}
+    
+    if not filters.get('from_date'):
+        filters['from_date'] = add_days(nowdate(), -30)
+    if not filters.get('to_date'):
+        filters['to_date'] = nowdate()
+    
+    try:
+        data = _get_unified_rejection_data(filters)
+        pivot_data = _get_product_grouped_pivot_data(data)
+        return pivot_data
+    except Exception as e:
+        frappe.log_error(f"Drill Down Pivot Error: {str(e)}", "Drill Down Pivot")
+        frappe.throw(_("Error fetching pivot data: {0}").format(str(e)))
+
+def _get_unified_rejection_data(filters):
+    """
+    Unified fetch from SPP and Inspection Entry
+    """
+    conditions = _build_report_filter_conditions(filters)
+    
+    spp_query = """
+    SELECT 
+        'SPP Inspection Entry' as source_type,
+        'Final Visual Inspection' as inspection_type,
+        spp.name as document_name,
+        spp.lot_no,
+        spp.product_ref_no as item_code,
+        spp.posting_date,
+        spp.inspector_code,
+        spp.total_inspected_qty_nos as inspected_qty,
+        COALESCE(SUM(fv.rejected_qty), 0) as rejected_qty,
+        CASE WHEN spp.lot_no LIKE '%%-%%' THEN SUBSTRING_INDEX(spp.lot_no, '-', -1) ELSE '1' END as sublot_number,
+        CASE WHEN spp.lot_no LIKE '%%-%%' THEN SUBSTRING_INDEX(spp.lot_no, '-', 1) ELSE spp.lot_no END as main_lot,
+        GROUP_CONCAT(CONCAT(fv.type_of_defect, ':', fv.rejected_qty) SEPARATOR '; ') as defect_details,
+        COALESCE(finalitem.fvi_rejection_cost, 0) as rejection_cost
+    FROM `tabSPP Inspection Entry` spp
+    LEFT JOIN `tabFV Inspection Entry Item` fv ON fv.parent = spp.name
+    LEFT JOIN `tabFinal Inspection Report Item` finalitem ON finalitem.spp_inspection_entry = spp.name
+    WHERE spp.docstatus != 2 {spp_cond}
+    GROUP BY spp.name
+    """.format(spp_cond=conditions['spp'])
+    
+    ie_query = """
+    SELECT 
+        'Inspection Entry' as source_type,
+        ie.inspection_type,
+        ie.name as document_name,
+        ie.lot_no,
+        ie.product_ref_no as item_code,
+        COALESCE(ie.posting_date, ie.creation) as posting_date,
+        ie.inspector_code,
+        COALESCE(ie.inspected_qty_nos, ie.total_inspected_qty_nos, 0) as inspected_qty,
+        COALESCE(SUM(iei.rejected_qty), 0) as rejected_qty,
+        CASE 
+            WHEN ie.lot_no LIKE '%%-%%' THEN SUBSTRING_INDEX(ie.lot_no, '-', -1) 
+            WHEN ie.lot_no LIKE '%%/%%' THEN SUBSTRING_INDEX(ie.lot_no, '/', -1)
+            ELSE '1' 
+        END as sublot_number,
+        CASE 
+            WHEN ie.lot_no LIKE '%%-%%' THEN SUBSTRING_INDEX(ie.lot_no, '-', 1)
+            WHEN ie.lot_no LIKE '%%/%%' THEN SUBSTRING_INDEX(ie.lot_no, '/', 1)
+            ELSE ie.lot_no 
+        END as main_lot,
+        GROUP_CONCAT(CONCAT(iei.type_of_defect, ':', iei.rejected_qty) SEPARATOR '; ') as defect_details,
+        COALESCE(lotitem.total_rejection_cost, incitem.rejection_cost, 0) as rejection_cost
+    FROM `tabInspection Entry` ie
+    LEFT JOIN `tabInspection Entry Item` iei ON iei.parent = ie.name
+    LEFT JOIN `tabLot Inspection Report Item` lotitem ON lotitem.inspection_entry = ie.name
+    LEFT JOIN `tabIncoming Inspection Report Item` incitem ON incitem.inspection_entry = ie.name
+    WHERE ie.docstatus != 2 {ie_cond}
+    GROUP BY ie.name
+    """.format(ie_cond=conditions['ie'])
+    
+    union_query = f"{spp_query} UNION ALL {ie_query} ORDER BY posting_date DESC"
+    return frappe.db.sql(union_query, filters, as_dict=True)
+
+def _build_report_filter_conditions(filters):
+    spp_cond = ""
+    ie_cond = ""
+    
+    if filters.get('from_date'):
+        spp_cond += " AND spp.posting_date >= %(from_date)s"
+        ie_cond += " AND ie.posting_date >= %(from_date)s"
+    if filters.get('to_date'):
+        spp_cond += " AND spp.posting_date <= %(to_date)s"
+        ie_cond += " AND ie.posting_date <= %(to_date)s"
+    if filters.get('item_code'):
+        spp_cond += " AND spp.product_ref_no = %(item_code)s"
+        ie_cond += " AND ie.product_ref_no = %(item_code)s"
+        
+    return {'spp': spp_cond, 'ie': ie_cond}
+
+def _process_sublot_data(data):
+    processed = []
+    for row in data:
+        inspected = flt(row.get('inspected_qty', 0))
+        rejected = flt(row.get('rejected_qty', 0))
+        row['rejection_percentage'] = round((rejected / inspected * 100), 2) if inspected > 0 else 0
+        row['quality_status'] = _get_quality_status(row['rejection_percentage'])
+        processed.append(row)
+    return processed
+
+def _get_quality_status(percentage):
+    if percentage == 0: return 'Perfect'
+    if percentage <= 2: return 'Excellent'
+    if percentage <= 5: return 'Good'
+    if percentage <= 10: return 'Warning'
+    return 'Critical'
+
+def _get_product_grouped_pivot_data(data):
+    product_groups = {}
+    all_normalized_defects = set()
+    
+    for row in data:
+        product = row.get('item_code') or 'Unknown'
+        main_lot = row.get('main_lot') or 'Unknown'
+        sublot = str(row.get('sublot_number', '1'))
+        
+        if product not in product_groups:
+            product_groups[product] = {'total_inspected': 0, 'total_rejected': 0, 'total_cost': 0, 'main_lots': {}, 'defects': {}}
+        
+        p_group = product_groups[product]
+        if main_lot not in p_group['main_lots']:
+            p_group['main_lots'][main_lot] = {'total_inspected': 0, 'total_rejected': 0, 'total_cost': 0, 'sublots': {}, 'defects': {}}
+            
+        m_group = p_group['main_lots'][main_lot]
+        sublot_key = f"{main_lot}_{sublot}"
+        if sublot_key not in m_group['sublots']:
+            m_group['sublots'][sublot_key] = {
+                'lot_no': row.get('lot_no'),
+                'inspected_qty': 0,
+                'rejected_qty': 0,
+                'rejection_cost': 0,
+                'defects': {},
+                'posting_date': row.get('posting_date'),
+                'inspector_code': row.get('inspector_code'),
+                'inspection_type': row.get('inspection_type'),
+                'document_name': row.get('document_name'),
+                'source_type': row.get('source_type')
+            }
+            
+        s_data = m_group['sublots'][sublot_key]
+        qty_inspected = flt(row.get('inspected_qty', 0))
+        qty_rejected = flt(row.get('rejected_qty', 0))
+        
+        s_data['inspected_qty'] += qty_inspected
+        s_data['rejected_qty'] += qty_rejected
+        
+        cost = flt(row.get('rejection_cost', 0))
+        s_data['rejection_cost'] += cost
+        m_group['total_cost'] += cost
+        p_group['total_cost'] += cost
+
+        m_group['total_inspected'] += qty_inspected
+        m_group['total_rejected'] += qty_rejected
+        p_group['total_inspected'] += qty_inspected
+        p_group['total_rejected'] += qty_rejected
+        
+        # Process Defects
+        defect_details = row.get('defect_details')
+        if defect_details:
+            for pair in defect_details.split('; '):
+                if ':' in pair:
+                    d_type, d_qty = pair.split(':', 1)
+                    try:
+                        val = flt(d_qty)
+                        norm = normalize_defect_type(d_type)
+                        all_normalized_defects.add(norm)
+                        
+                        s_data['defects'][norm] = s_data['defects'].get(norm, 0) + val
+                        m_group['defects'][norm] = m_group['defects'].get(norm, 0) + val
+                        p_group['defects'][norm] = p_group['defects'].get(norm, 0) + val
+                    except: continue
+
+    # Flatten for tree structure
+    rows = []
+    sorted_defects = sorted(list(all_normalized_defects))
+    
+    for product, p_data in product_groups.items():
+        p_row = {
+            'id': f"p_{product}",
+            'type': 'product',
+            'label': product,
+            'inspected': p_data['total_inspected'],
+            'rejected': p_data['total_rejected'],
+            'rejection_cost': p_data['total_cost'],
+            'rate': round((p_data['total_rejected']/p_data['total_inspected']*100), 2) if p_data['total_inspected'] > 0 else 0,
+            **p_data['defects']
+        }
+        rows.append(p_row)
+        
+        for ml, ml_data in p_data['main_lots'].items():
+            ml_row = {
+                'id': f"ml_{product}_{ml}",
+                'parentId': f"p_{product}",
+                'type': 'main_lot',
+                'label': ml,
+                'inspected': ml_data['total_inspected'],
+                'rejected': ml_data['total_rejected'],
+                'rejection_cost': ml_data['total_cost'],
+                'rate': round((ml_data['total_rejected']/ml_data['total_inspected']*100), 2) if ml_data['total_inspected'] > 0 else 0,
+                **ml_data['defects']
+            }
+            rows.append(ml_row)
+            
+            for sl_id, sl_data in ml_data['sublots'].items():
+                sl_row = {
+                    'id': f"sl_{product}_{sl_id}",
+                    'parentId': f"ml_{product}_{ml}",
+                    'type': 'sublot',
+                    'label': sl_data['lot_no'],
+                    'inspected': sl_data['inspected_qty'],
+                    'rejected': sl_data['rejected_qty'],
+                    'rejection_cost': sl_data['rejection_cost'],
+                    'rate': round((sl_data['rejected_qty']/sl_data['inspected_qty']*100), 2) if sl_data['inspected_qty'] > 0 else 0,
+                    'inspector': sl_data['inspector_code'],
+                    'inspection_type': sl_data['inspection_type'],
+                    'date': sl_data['posting_date'],
+                    **sl_data['defects']
+                }
+                rows.append(sl_row)
+                
+    return {
+        'rows': rows,
+        'defect_columns': sorted_defects,
+        'summary': {
+            'total_products': len(product_groups),
+            'total_inspected': sum(p['total_inspected'] for p in product_groups.values()),
+            'total_rejected': sum(p['total_rejected'] for p in product_groups.values())
+        }
+    }
