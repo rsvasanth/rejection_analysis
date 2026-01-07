@@ -2996,7 +2996,16 @@ def _build_report_filter_conditions(filters):
     if filters.get('item_code'):
         spp_cond += " AND spp.product_ref_no = %(item_code)s"
         ie_cond += " AND ie.product_ref_no = %(item_code)s"
-        
+    
+    if filters.get('inspection_type'):
+        # For SPP, we only show it if 'Final Visual Inspection' is selected
+        if filters['inspection_type'] == 'Final Visual Inspection':
+            ie_cond += " AND ie.inspection_type = %(inspection_type)s"
+        else:
+            # If any other type is selected, SPP should yield no results
+            spp_cond += " AND 1=0" 
+            ie_cond += " AND ie.inspection_type = %(inspection_type)s"
+            
     return {'spp': spp_cond, 'ie': ie_cond}
 
 def _process_sublot_data(data):

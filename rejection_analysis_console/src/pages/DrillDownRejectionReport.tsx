@@ -22,6 +22,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import {
     Tabs,
     TabsContent,
     TabsList,
@@ -92,6 +99,7 @@ const DrillDownRejectionReport: React.FC = () => {
     const [fromDate, setFromDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
     const [toDate, setToDate] = useState(format(new Date(), 'yyyy-MM-dd'))
     const [itemCode, setItemCode] = useState('')
+    const [inspectionType, setInspectionType] = useState('All')
 
     // Data State
     const [standardData, setStandardData] = useState<RejectionRecord[]>([])
@@ -109,7 +117,8 @@ const DrillDownRejectionReport: React.FC = () => {
                 filters: {
                     from_date: fromDate,
                     to_date: toDate,
-                    item_code: itemCode
+                    item_code: itemCode,
+                    inspection_type: inspectionType === 'All' ? '' : inspectionType
                 }
             })
             const data = response?.message || response
@@ -131,7 +140,8 @@ const DrillDownRejectionReport: React.FC = () => {
                 filters: {
                     from_date: fromDate,
                     to_date: toDate,
-                    item_code: itemCode
+                    item_code: itemCode,
+                    inspection_type: inspectionType === 'All' ? '' : inspectionType
                 }
             })
             const data = response?.message || response
@@ -320,6 +330,22 @@ const DrillDownRejectionReport: React.FC = () => {
                                         onChange={(e) => setItemCode(e.target.value)}
                                     />
                                 </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="inspectionType">Inspection Type</Label>
+                                <Select value={inspectionType} onValueChange={setInspectionType}>
+                                    <SelectTrigger id="inspectionType">
+                                        <SelectValue placeholder="All Types" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Types</SelectItem>
+                                        <SelectItem value="Incoming Inspection">Incoming Inspection</SelectItem>
+                                        <SelectItem value="Patrol Inspection">Patrol Inspection</SelectItem>
+                                        <SelectItem value="Line Inspection">Line Inspection</SelectItem>
+                                        <SelectItem value="Lot Inspection">Lot Inspection</SelectItem>
+                                        <SelectItem value="Final Visual Inspection">Final Visual Inspection</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <Button className="w-full" onClick={() => activeTab === 'pivot' ? fetchPivotData() : fetchStandardData()}>
                                 <Filter className="mr-2 h-4 w-4" />
