@@ -226,19 +226,17 @@ const DrillDownRejectionReport: React.FC = () => {
                 return
             }
 
-            // For pivot, we export the flattened visible rows or all rows
-            // Standardizing headers for pivot
             const baseHeaders: Record<string, string> = {
-                'product_code': 'Product',
+                'product_code': 'Product Code',
                 'main_lot': 'Main Lot',
-                'lot_no': 'Lot No',
+                'lot_no': 'Lot Number',
                 'inspection_type': 'Inspection Type',
-                'inspected': 'Inspected',
-                'rejected': 'Rejected',
-                'rejection_cost': 'Cost (₹)',
-                'rate': 'Rate %',
+                'inspected': 'Inspected Qty',
+                'rejected': 'Rejected Qty',
+                'rejection_cost': 'Rejection Cost (₹)',
+                'rate': 'Rejection Rate %',
                 'inspector': 'Inspector',
-                'date': 'Date'
+                'date': 'Inspection Date'
             }
 
             // Add dynamic defect columns
@@ -246,7 +244,14 @@ const DrillDownRejectionReport: React.FC = () => {
                 baseHeaders[col] = col
             })
 
-            exportToCSV(pivotData.rows, `Rejection_Report_Pivot_${format(new Date(), 'yyyyMMdd')}`, baseHeaders)
+            // Sort rows by hierarchy for clean CSV
+            const sortedRowsForExport = [...pivotData.rows].sort((a, b) => {
+                const aIdx = pivotData.rows.indexOf(a)
+                const bIdx = pivotData.rows.indexOf(b)
+                return aIdx - bIdx
+            })
+
+            exportToCSV(sortedRowsForExport, `Rejection_Report_Pivot_${format(new Date(), 'yyyyMMdd')}`, baseHeaders)
         }
         toast.success('Export started')
     }
@@ -255,18 +260,15 @@ const DrillDownRejectionReport: React.FC = () => {
         if (!pivotData || !pivotData.rows) return []
         const results: PivotRow[] = []
 
-        // First pass: add products
         const products = pivotData.rows.filter(r => r.type === 'product')
 
         products.forEach(p => {
             results.push(p)
             if (expandedRows.has(p.id)) {
-                // Add main lots
                 const mainLots = pivotData.rows.filter(r => r.type === 'main_lot' && r.parentId === p.id)
                 mainLots.forEach(ml => {
                     results.push(ml)
                     if (expandedRows.has(ml.id)) {
-                        // Add sublots
                         const sublots = pivotData.rows.filter(r => r.type === 'sublot' && r.parentId === ml.id)
                         results.push(...sublots)
                     }
@@ -418,34 +420,34 @@ const DrillDownRejectionReport: React.FC = () => {
                         </TabsList>
                     </div>
 
-                    <TabsContent value="pivot" className="border rounded-lg bg-card overflow-hidden mt-4">
+                    <TabsContent value="pivot" className="border rounded-lg bg-card overflow-hidden mt-4 shadow-sm">
                         <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-900 hover:bg-slate-900">
-                                    <TableRow>
-                                        <TableHead className="w-[180px] text-white sticky left-0 bg-slate-900 z-10 border-r">Product</TableHead>
-                                        <TableHead className="w-[150px] text-white border-r">Main Lot</TableHead>
-                                        <TableHead className="w-[150px] text-white border-r">Lot No</TableHead>
-                                        <TableHead className="text-white text-center">Type</TableHead>
-                                        <TableHead className="text-white text-center">Inspected</TableHead>
-                                        <TableHead className="text-white text-center">Rejected</TableHead>
-                                        <TableHead className="text-white text-center">Cost</TableHead>
-                                        <TableHead className="text-white text-center border-r">Rate %</TableHead>
+                            <Table className="border-collapse">
+                                <TableHeader className="bg-slate-900 border-b-2 border-slate-700">
+                                    <TableRow className="hover:bg-slate-900">
+                                        <TableHead className="w-[180px] text-white sticky left-0 bg-slate-900 z-30 border-r border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">Product</TableHead>
+                                        <TableHead className="w-[140px] text-white sticky left-[180px] bg-slate-900 z-30 border-r border-slate-800">Main Lot</TableHead>
+                                        <TableHead className="w-[140px] text-white sticky left-[320px] bg-slate-900 z-30 border-r border-slate-800">Lot No</TableHead>
+                                        <TableHead className="min-w-[120px] text-white text-center">Type / Source</TableHead>
+                                        <TableHead className="text-white text-center min-w-[100px]">Inspected</TableHead>
+                                        <TableHead className="text-white text-center min-w-[100px]">Rejected</TableHead>
+                                        <TableHead className="text-white text-center min-w-[100px]">Cost</TableHead>
+                                        <TableHead className="text-white text-center min-w-[80px] border-r border-slate-800">Rate %</TableHead>
                                         {pivotData?.defect_columns.map(col => (
-                                            <TableHead key={col} className="text-white text-center min-w-[60px]">{col}</TableHead>
+                                            <TableHead key={col} className="text-white text-center min-w-[70px] border-r border-slate-800 last:border-r-0">{col}</TableHead>
                                         ))}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
+                                            <TableCell colSpan={10 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
                                                 Loading data...
                                             </TableCell>
                                         </TableRow>
                                     ) : visibleRows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
+                                            <TableCell colSpan={10 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
                                                 No records found
                                             </TableCell>
                                         </TableRow>
@@ -455,84 +457,90 @@ const DrillDownRejectionReport: React.FC = () => {
                                                 key={row.id}
                                                 className={`
                             ${row.type === 'product' ? 'bg-slate-50 font-bold border-t-2 border-slate-200' : ''}
-                            ${row.type === 'main_lot' ? 'bg-white font-medium' : ''}
-                            ${row.type === 'sublot' ? 'bg-white text-xs text-muted-foreground italic' : ''}
+                            ${row.type === 'main_lot' ? 'bg-white font-medium shadow-inner' : ''}
+                            ${row.type === 'sublot' ? 'bg-white text-xs text-muted-foreground' : ''}
+                            hover:bg-slate-100/50 transition-colors
                           `}
                                             >
                                                 {/* Product Column */}
-                                                <TableCell className={`sticky left-0 bg-inherit z-10 border-r py-3`}>
+                                                <TableCell className={`sticky left-0 bg-inherit z-20 border-r py-3 align-middle shadow-[2px_0_5px_rgba(0,0,0,0.05)]`}>
                                                     <div className="flex items-center gap-2">
-                                                        {row.type === 'product' && (
-                                                            <button onClick={() => toggleRow(row.id)} className="hover:text-primary">
-                                                                {expandedRows.has(row.id) ?
-                                                                    <MinusSquare className="h-4 w-4" /> :
-                                                                    <PlusSquare className="h-4 w-4" />
-                                                                }
-                                                            </button>
+                                                        {row.type === 'product' ? (
+                                                            <>
+                                                                <button onClick={() => toggleRow(row.id)} className="hover:text-primary shrink-0">
+                                                                    {expandedRows.has(row.id) ?
+                                                                        <MinusSquare className="h-4 w-4" /> :
+                                                                        <PlusSquare className="h-4 w-4" />
+                                                                    }
+                                                                </button>
+                                                                <span className="text-blue-700 font-bold truncate">{row.product_code}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-muted-foreground/30 font-normal italic pl-6">{row.product_code}</span>
                                                         )}
-                                                        <span className={row.type === 'product' ? 'text-blue-700 font-bold' : 'text-muted-foreground opacity-50'}>
-                                                            {row.product_code}
-                                                        </span>
                                                     </div>
                                                 </TableCell>
 
                                                 {/* Main Lot Column */}
-                                                <TableCell className="border-r">
+                                                <TableCell className="sticky left-[180px] bg-inherit z-20 border-r align-middle">
                                                     <div className="flex items-center gap-2">
-                                                        {row.type === 'main_lot' && (
-                                                            <button onClick={() => toggleRow(row.id)} className="hover:text-primary">
-                                                                {expandedRows.has(row.id) ?
-                                                                    <MinusSquare className="h-4 w-4" /> :
-                                                                    <PlusSquare className="h-4 w-4" />
-                                                                }
-                                                            </button>
+                                                        {row.type === 'main_lot' ? (
+                                                            <>
+                                                                <button onClick={() => toggleRow(row.id)} className="hover:text-primary shrink-0">
+                                                                    {expandedRows.has(row.id) ?
+                                                                        <MinusSquare className="h-4 w-4" /> :
+                                                                        <PlusSquare className="h-4 w-4" />
+                                                                    }
+                                                                </button>
+                                                                <span className="font-bold text-slate-800 truncate">{row.main_lot}</span>
+                                                            </>
+                                                        ) : row.type === 'sublot' ? (
+                                                            <span className="text-muted-foreground/40 font-normal italic pl-6">{row.main_lot}</span>
+                                                        ) : (
+                                                            <span className="invisible">-</span>
                                                         )}
-                                                        <span className={row.type === 'main_lot' ? 'font-bold' : row.type === 'sublot' ? 'text-muted-foreground opacity-50' : 'invisible'}>
-                                                            {row.main_lot}
-                                                        </span>
                                                     </div>
                                                 </TableCell>
 
                                                 {/* Lot No Column */}
-                                                <TableCell className="border-r">
+                                                <TableCell className="sticky left-[320px] bg-inherit z-20 border-r align-middle">
                                                     <div className="flex items-center gap-2">
                                                         {row.type === 'sublot' ? (
-                                                            <>
-                                                                <span className="font-medium text-slate-900">{row.lot_no}</span>
-                                                                <Badge variant="outline" className="text-[10px] ml-auto">
-                                                                    {row.inspector}
-                                                                </Badge>
-                                                            </>
-                                                        ) : <span className="invisible text-[10px]">N/A</span>}
+                                                            <div className="flex flex-col gap-0.5 min-w-0">
+                                                                <span className="font-semibold text-slate-900 truncate">{row.lot_no}</span>
+                                                                <span className="text-[10px] text-muted-foreground/70 uppercase tracking-tighter">{row.inspector}</span>
+                                                            </div>
+                                                        ) : <span className="invisible">-</span>}
                                                     </div>
                                                 </TableCell>
 
-                                                {/* Metadata Columns */}
-                                                <TableCell className="text-center">
-                                                    {row.type === 'sublot' && row.inspection_type ? (
-                                                        <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+                                                {/* Type Column */}
+                                                <TableCell className="text-center align-middle">
+                                                    {row.type === 'sublot' ? (
+                                                        <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap">
                                                             {row.inspection_type}
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="secondary" className="text-[10px] capitalize font-normal">
+                                                        <Badge variant="secondary" className="text-[10px] uppercase font-bold tracking-widest px-1.5 opacity-60">
                                                             {row.type}
                                                         </Badge>
                                                     )}
                                                 </TableCell>
 
-                                                <TableCell className="text-right font-medium">{row.inspected.toLocaleString()}</TableCell>
-                                                <TableCell className="text-center tabular-nums font-bold text-red-600">{row.rejected.toLocaleString()}</TableCell>
-                                                <TableCell className="text-right text-xs font-medium">
+                                                <TableCell className="text-right tabular-nums font-medium">{row.inspected.toLocaleString()}</TableCell>
+                                                <TableCell className="text-right tabular-nums font-bold text-red-600">{row.rejected.toLocaleString()}</TableCell>
+                                                <TableCell className="text-right tabular-nums text-xs font-semibold text-slate-700">
                                                     {row.rejection_cost > 0 ? `₹${row.rejection_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
                                                 </TableCell>
-                                                <TableCell className={`text-center tabular-nums border-r font-bold ${row.rate > 5 ? 'text-red-600' : ''}`}>
+                                                <TableCell className={`text-center tabular-nums border-r font-black ${row.rate > 5 ? 'text-red-700' : 'text-slate-600'}`}>
                                                     {row.rate.toFixed(1)}%
                                                 </TableCell>
+
                                                 {pivotData?.defect_columns.map(col => {
                                                     const val = row[col] || 0
                                                     return (
                                                         <TableCell key={col} className={`text-center tabular-nums border-r last:border-r-0 ${getHeatmapColor(val)}`}>
-                                                            {val || '-'}
+                                                            <span className={val > 0 ? 'font-bold' : ''}>{val || '-'}</span>
                                                         </TableCell>
                                                     )
                                                 })}
@@ -544,15 +552,15 @@ const DrillDownRejectionReport: React.FC = () => {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="standard" className="border rounded-lg bg-card overflow-hidden mt-4">
+                    <TabsContent value="standard" className="border rounded-lg bg-card overflow-hidden mt-4 shadow-sm">
                         <Table>
-                            <TableHeader className="bg-slate-50">
+                            <TableHeader className="bg-slate-50 border-b">
                                 <TableRow>
                                     <TableHead>Source</TableHead>
                                     <TableHead>Item Code</TableHead>
                                     <TableHead>Lot No</TableHead>
                                     <TableHead>Type</TableHead>
-                                    <TableHead>Doc Type</TableHead>
+                                    <TableHead>Doc Name</TableHead>
                                     <TableHead className="text-right">Inspected</TableHead>
                                     <TableHead className="text-right">Rejected</TableHead>
                                     <TableHead className="text-right">Cost</TableHead>
@@ -564,40 +572,40 @@ const DrillDownRejectionReport: React.FC = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center">Loading data...</TableCell>
+                                        <TableCell colSpan={11} className="h-24 text-center">Loading data...</TableCell>
                                     </TableRow>
                                 ) : standardData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="h-24 text-center">No records found</TableCell>
+                                        <TableCell colSpan={11} className="h-24 text-center">No records found</TableCell>
                                     </TableRow>
                                 ) : (
                                     standardData.map((row, idx) => (
-                                        <TableRow key={idx}>
+                                        <TableRow key={idx} className="hover:bg-slate-50">
                                             <TableCell>
-                                                <Badge variant="secondary" className="text-[10px]">
+                                                <Badge variant="outline" className="text-[10px] bg-slate-50">
                                                     {row.source_type.split(' ')[0]}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="font-medium">{row.item_code}</TableCell>
-                                            <TableCell>{row.lot_no}</TableCell>
+                                            <TableCell className="font-bold text-slate-900">{row.item_code}</TableCell>
+                                            <TableCell className="font-medium">{row.lot_no}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-100">
                                                     {row.inspection_type}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">{row.document_name}</TableCell>
-                                            <TableCell className="text-right">{row.inspected_qty.toLocaleString()}</TableCell>
-                                            <TableCell className="text-right font-bold text-red-600">{row.rejected_qty.toLocaleString()}</TableCell>
-                                            <TableCell className="text-right font-medium">
+                                            <TableCell className="text-muted-foreground text-[11px] font-mono">{row.document_name}</TableCell>
+                                            <TableCell className="text-right tabular-nums">{row.inspected_qty.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right tabular-nums font-bold text-red-600">{row.rejected_qty.toLocaleString()}</TableCell>
+                                            <TableCell className="text-right tabular-nums font-semibold">
                                                 {row.rejection_cost > 0 ? `₹${row.rejection_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
                                             </TableCell>
-                                            <TableCell className="text-right font-bold">{row.rejection_percentage.toFixed(2)}%</TableCell>
+                                            <TableCell className="text-right tabular-nums font-bold">{row.rejection_percentage.toFixed(2)}%</TableCell>
                                             <TableCell>
-                                                <Badge className={getQualityBadgeColor(row.quality_status)}>
+                                                <Badge className={`${getQualityBadgeColor(row.quality_status)} text-white`}>
                                                     {row.quality_status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                                            <TableCell className="max-w-[150px] truncate text-[10px] text-muted-foreground font-medium">
                                                 {row.defect_details || '-'}
                                             </TableCell>
                                         </TableRow>
