@@ -78,6 +78,9 @@ interface PivotRow {
     rate: number
     inspector?: string
     inspection_type?: string
+    product_code?: string
+    main_lot?: string
+    lot_no?: string
     date?: string
     [key: string]: any // Dynamic defect columns
 }
@@ -226,8 +229,9 @@ const DrillDownRejectionReport: React.FC = () => {
             // For pivot, we export the flattened visible rows or all rows
             // Standardizing headers for pivot
             const baseHeaders: Record<string, string> = {
-                'label': 'Identity/Level',
-                'type': 'Type',
+                'product_code': 'Product',
+                'main_lot': 'Main Lot',
+                'lot_no': 'Lot No',
                 'inspection_type': 'Inspection Type',
                 'inspected': 'Inspected',
                 'rejected': 'Rejected',
@@ -419,7 +423,10 @@ const DrillDownRejectionReport: React.FC = () => {
                             <Table>
                                 <TableHeader className="bg-slate-900 hover:bg-slate-900">
                                     <TableRow>
-                                        <TableHead className="w-[300px] text-white sticky left-0 bg-slate-900 z-10 border-r">Level / Identity</TableHead>
+                                        <TableHead className="w-[180px] text-white sticky left-0 bg-slate-900 z-10 border-r">Product</TableHead>
+                                        <TableHead className="w-[150px] text-white border-r">Main Lot</TableHead>
+                                        <TableHead className="w-[150px] text-white border-r">Lot No</TableHead>
+                                        <TableHead className="text-white text-center">Type</TableHead>
                                         <TableHead className="text-white text-center">Inspected</TableHead>
                                         <TableHead className="text-white text-center">Rejected</TableHead>
                                         <TableHead className="text-white text-center">Cost</TableHead>
@@ -432,13 +439,13 @@ const DrillDownRejectionReport: React.FC = () => {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow>
-                                            <TableCell colSpan={4 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
+                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
                                                 Loading data...
                                             </TableCell>
                                         </TableRow>
                                     ) : visibleRows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={4 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
+                                            <TableCell colSpan={8 + (pivotData?.defect_columns.length || 0)} className="h-24 text-center">
                                                 No records found
                                             </TableCell>
                                         </TableRow>
@@ -449,12 +456,13 @@ const DrillDownRejectionReport: React.FC = () => {
                                                 className={`
                             ${row.type === 'product' ? 'bg-slate-50 font-bold border-t-2 border-slate-200' : ''}
                             ${row.type === 'main_lot' ? 'bg-white font-medium' : ''}
-                            ${row.type === 'sublot' ? 'bg-white text-xs text-muted-foreground' : ''}
+                            ${row.type === 'sublot' ? 'bg-white text-xs text-muted-foreground italic' : ''}
                           `}
                                             >
-                                                <TableCell className={`sticky left-0 bg-inherit z-10 border-r py-3 ${row.type === 'sublot' ? 'pl-12' : row.type === 'main_lot' ? 'pl-8' : 'pl-4'}`}>
+                                                {/* Product Column */}
+                                                <TableCell className={`sticky left-0 bg-inherit z-10 border-r py-3`}>
                                                     <div className="flex items-center gap-2">
-                                                        {(row.type === 'product' || row.type === 'main_lot') && (
+                                                        {row.type === 'product' && (
                                                             <button onClick={() => toggleRow(row.id)} className="hover:text-primary">
                                                                 {expandedRows.has(row.id) ?
                                                                     <MinusSquare className="h-4 w-4" /> :
@@ -462,23 +470,56 @@ const DrillDownRejectionReport: React.FC = () => {
                                                                 }
                                                             </button>
                                                         )}
-                                                        <span className={`${row.type === 'product' ? 'text-blue-700' : ''}`}>
-                                                            {row.label}
+                                                        <span className={row.type === 'product' ? 'text-blue-700 font-bold' : 'text-muted-foreground opacity-50'}>
+                                                            {row.product_code}
                                                         </span>
-                                                        {row.type === 'sublot' && (
-                                                            <Badge variant="outline" className="text-[10px] ml-auto">
-                                                                {row.inspector}
-                                                            </Badge>
-                                                        )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
-                                                    {row.type === 'sublot' && row.inspection_type && (
-                                                        <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-50">
+
+                                                {/* Main Lot Column */}
+                                                <TableCell className="border-r">
+                                                    <div className="flex items-center gap-2">
+                                                        {row.type === 'main_lot' && (
+                                                            <button onClick={() => toggleRow(row.id)} className="hover:text-primary">
+                                                                {expandedRows.has(row.id) ?
+                                                                    <MinusSquare className="h-4 w-4" /> :
+                                                                    <PlusSquare className="h-4 w-4" />
+                                                                }
+                                                            </button>
+                                                        )}
+                                                        <span className={row.type === 'main_lot' ? 'font-bold' : row.type === 'sublot' ? 'text-muted-foreground opacity-50' : 'invisible'}>
+                                                            {row.main_lot}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+
+                                                {/* Lot No Column */}
+                                                <TableCell className="border-r">
+                                                    <div className="flex items-center gap-2">
+                                                        {row.type === 'sublot' ? (
+                                                            <>
+                                                                <span className="font-medium text-slate-900">{row.lot_no}</span>
+                                                                <Badge variant="outline" className="text-[10px] ml-auto">
+                                                                    {row.inspector}
+                                                                </Badge>
+                                                            </>
+                                                        ) : <span className="invisible text-[10px]">N/A</span>}
+                                                    </div>
+                                                </TableCell>
+
+                                                {/* Metadata Columns */}
+                                                <TableCell className="text-center">
+                                                    {row.type === 'sublot' && row.inspection_type ? (
+                                                        <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
                                                             {row.inspection_type}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary" className="text-[10px] capitalize font-normal">
+                                                            {row.type}
                                                         </Badge>
                                                     )}
                                                 </TableCell>
+
                                                 <TableCell className="text-right font-medium">{row.inspected.toLocaleString()}</TableCell>
                                                 <TableCell className="text-center tabular-nums font-bold text-red-600">{row.rejected.toLocaleString()}</TableCell>
                                                 <TableCell className="text-right text-xs font-medium">
