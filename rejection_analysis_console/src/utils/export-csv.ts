@@ -37,14 +37,24 @@ export function exportToCSV(data: any[], fileName: string, headerMap?: Record<st
     ];
 
     // 3. Create blob and download
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const BOM = '\uFEFF';
+    const csvContent = BOM + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
+
+    // Ensure filename ends with .csv
+    // Regex allows alphanumeric, underscore, dash, and dot
+    const cleanFileName = fileName.replace(/[^\w\s-.]/gi, '_');
+    const finalFileName = cleanFileName.toLowerCase().endsWith('.csv')
+        ? cleanFileName
+        : `${cleanFileName}.csv`;
+
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${fileName}.csv`);
-    link.style.visibility = 'hidden';
+    link.href = url;
+    link.download = finalFileName;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
