@@ -61,6 +61,11 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Operator Traceability",
+      url: "/operator-traceability",
+      icon: IconFileAnalytics,
+    },
+    {
       title: "Reports",
       url: "/reports",
       icon: IconFileAnalytics,

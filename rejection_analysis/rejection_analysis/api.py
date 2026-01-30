@@ -22,6 +22,252 @@ from datetime import datetime, timedelta
 from frappe import _
 from frappe.utils import today, getdate, flt, add_days, nowdate
 
+@frappe.whitelist()
+def get_sample_mpe_data(limit=50):
+    mpe_list = frappe.db.get_list('Moulding Production Entry', 
+                           filters={'docstatus': 1}, 
+                           fields=['name','moulding_date','scan_lot_number','operator','employee_name','job_card','batch_details','number_of_lifts','mould_reference','item_to_produce'], 
+                           limit=limit, order_by='creation desc')
+    
+    results = []
+    for record in mpe_list:
+        # Get shift from Job Card
+        if record.get('job_card'):
+            record['shift'] = frappe.db.get_value('Job Card', record['job_card'], 'shift_number')
+        
+        # Parse batch details
+        if record.get('batch_details'):
+            try:
+                record['batch_details_parsed'] = json.loads(record['batch_details'])
+            except:
+                pass
+        results.append(record)
+        
+    print(json.dumps(results, indent=2, default=str))
+    return results
+
+@frappe.whitelist()
+def get_reverse_traceability():
+    # Find recent Material Transfer Items with batch numbers
+    mti = frappe.db.get_all('Material Transfer Item', 
+                            fields=['spp_batch_no', 'parent'], 
+                            limit=10, order_by='creation desc',
+                            filters={'spp_batch_no': ['is', 'set'], 'parenttype': 'Cut Bit Transfer'})
+    
+    results = []
+    for item in mti:
+        batch_no = item.get('spp_batch_no')
+        if not batch_no: continue
+        
+        # Look for MPE that used this batch
+        mpe = frappe.db.sql("""
+            SELECT name, scan_lot_number, employee_name, job_card, batch_details
+            FROM `tabMoulding Production Entry`
+            WHERE batch_details LIKE %s
+            AND docstatus = 1
+            LIMIT 1
+        """, (f"%{batch_no}%",), as_dict=1)
+        
+        if mpe:
+            res = {
+                'mti': item,
+                'mti_employee': frappe.db.get_value('Cut Bit Transfer', item['parent'], 'employee'),
+                'mpe': mpe[0]
+            }
+            if res['mti_employee']:
+                res['mti_employee_name'] = frappe.db.get_value('Employee', res['mti_employee'], 'employee_name')
+            results.append(res)
+            
+    print(json.dumps(results, indent=2, default=str))
+    return results
+@frappe.whitelist()
+def get_traceability_data(bin_code=None, batch_no=None):
+    data = {}
+    if bin_code:
+        # Notes: Blanking Operator information is derived from the Blanking DC of the bin
+        blanking = frappe.db.get_list('Blanking DC Entry', 
+                                    filters={'bin_code': bin_code}, 
+                                    fields=['name','employee','posting_date'], 
+                                    limit=1, order_by='creation desc')
+        if blanking:
+            data['blanking'] = blanking[0]
+            data['blanking']['employee_name'] = frappe.db.get_value('Employee', blanking[0]['employee'], 'employee_name')
+            
+    if batch_no:
+        # Notes: some Sizing Operator information is from the first Cutbit Entry of the Batch
+        # Find Material Transfer Item (child of Cut Bit Transfer)
+        # Try batch_no first
+        sizing = frappe.db.sql("""
+            SELECT cbt.name as parent, cbt.employee 
+            FROM `tabMaterial Transfer Item` mti
+            JOIN `tabCut Bit Transfer` cbt ON cbt.name = mti.parent
+            WHERE mti.batch_no = %s
+            ORDER BY cbt.creation ASC LIMIT 1
+        """, (batch_no,), as_dict=1)
+        
+        if not sizing:
+            # Try spp_batch_no
+            sizing = frappe.db.sql("""
+                SELECT cbt.name as parent, cbt.employee 
+                FROM `tabMaterial Transfer Item` mti
+                JOIN `tabCut Bit Transfer` cbt ON cbt.name = mti.parent
+                WHERE mti.spp_batch_no = %s
+                ORDER BY cbt.creation ASC LIMIT 1
+            """, (batch_no,), as_dict=1)
+        
+        if sizing:
+            data['sizing'] = sizing[0]
+            data['sizing']['employee_name'] = frappe.db.get_value('Employee', sizing[0]['employee'], 'employee_name')
+        else:
+            # Debug: find any CBT to see what the batches look like
+            debug_items = frappe.db.get_list('Material Transfer Item', fields=['batch_no', 'spp_batch_no'], limit=3)
+            data['sizing_debug'] = debug_items
+            
+    print(json.dumps(data, indent=2, default=str))
+    return data
+
+@frappe.whitelist()
+def list_recent_mtis():
+    items = frappe.db.get_all('Material Transfer Item', 
+                             fields=['spp_batch_no', 'batch_no', 'parent'], 
+                             limit=20, order_by='creation desc',
+                             filters={'parenttype': 'Cut Bit Transfer'})
+@frappe.whitelist()
+@frappe.whitelist()
+def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
+    """
+    Get operator traceability data for incentive calculations.
+    
+    Args:
+        limit: Max number of records to return
+        from_date: Start date for range filter (YYYY-MM-DD)
+        to_date: End date for range filter (YYYY-MM-DD)
+        date: Single date filter (YYYY-MM-DD), overrides from_date/to_date if provided
+    """
+    # Build date filters
+    filters = {'docstatus': 1}
+    
+    if date:
+        # Single date takes precedence
+        filters['moulding_date'] = date
+    elif from_date and to_date:
+        # Date range
+        filters['moulding_date'] = ['between', [from_date, to_date]]
+    elif from_date:
+        # From date only
+        filters['moulding_date'] = ['>=', from_date]
+    elif to_date:
+        # To date only
+        filters['moulding_date'] = ['<=', to_date]
+    
+    mpe_list = frappe.db.get_list('Moulding Production Entry', 
+                           filters=filters, 
+                           fields=['name','moulding_date','scan_lot_number','operator','employee_name','job_card','batch_details','number_of_lifts','mould_reference','item_to_produce'], 
+                           limit=50, order_by='creation desc')
+    
+    results = []
+    for mpe in mpe_list:
+        if len(results) >= limit: break
+        
+        # Get shift
+        shift = frappe.db.get_value('Job Card', mpe['job_card'], 'shift_number') if mpe.get('job_card') else ""
+        
+        # Parse batches
+        batch_details = []
+        try:
+            batch_details = json.loads(mpe.get('batch_details') or '[]')
+        except: continue
+        
+        if not batch_details: continue
+
+        row = {
+            "Date": mpe['moulding_date'],
+            "Shift": shift,
+            "Lot No": mpe['scan_lot_number'],
+            "Item": mpe['item_to_produce'],
+            "Mould Ref": mpe['mould_reference'],
+            "No. of Lifts": mpe['number_of_lifts'],
+            "Press Operator": mpe['employee_name']
+        }
+
+        # Bins 1-5
+        for i in range(1, 6):
+            bin_val = ""
+            qty_val = ""
+            blanking_op = ""
+            if len(batch_details) >= i:
+                d = batch_details[i-1]
+                bin_val = d.get('bin', "")
+                qty_val = d.get('consumed__qty' if 'consumed__qty' in d else 'qty', "")
+                # Trace Blanking Operator
+                if bin_val:
+                    blanking_emp = frappe.db.get_value('Blanking DC Entry', {'bin_code': bin_val}, 'employee')
+                    if blanking_emp:
+                        blanking_op = frappe.db.get_value('Employee', blanking_emp, 'employee_name')
+            
+            row[f"Bin{i}"] = bin_val
+            row[f"Bin{i} Qty"] = qty_val
+            if i <= 3:
+                row[f"Blanking Operator {i}"] = blanking_op
+
+        # Batches 1-3
+        # In MPE, spp_batch_number is usually unique per row but multiple rows might exist in batch_details
+        unique_batches = []
+        for d in batch_details:
+            b = d.get('spp_batch_number')
+            if b and b not in unique_batches:
+                unique_batches.append(b)
+
+        for i in range(1, 4):
+            batch_val = ""
+            batch_qty = ""
+            sizing_op = ""
+            if len(unique_batches) >= i:
+                batch_val = unique_batches[i-1]
+                # Sum qty for this batch across all bins in this MPE
+                batch_qty = sum(float(d.get('consumed__qty' if 'consumed__qty' in d else 'qty', 0)) 
+                              for d in batch_details if d.get('spp_batch_number') == batch_val)
+                
+                # Trace Sizing Operator (Strictly from the FIRST Cut Bit Transfer of the batch)
+                # Check both Material Transfer Item OR manual_scan_spp_batch_number in parent
+                sizing_sql = """
+                    SELECT name, employee FROM (
+                        SELECT cbt.name, cbt.employee, cbt.creation
+                        FROM `tabMaterial Transfer Item` mti
+                        JOIN `tabCut Bit Transfer` cbt ON cbt.name = mti.parent
+                        WHERE mti.spp_batch_no = %s AND cbt.docstatus = 1
+                        
+                        UNION
+                        
+                        SELECT name, employee, creation
+                        FROM `tabCut Bit Transfer`
+                        WHERE manual_scan_spp_batch_number = %s AND docstatus = 1
+                    ) combined
+                    ORDER BY creation ASC LIMIT 1
+                """
+                sizing_res = frappe.db.sql(sizing_sql, (batch_val, batch_val), as_dict=1)
+                
+                sizing_emp = ""
+                if sizing_res:
+                    sizing_emp = sizing_res[0].employee
+                    # print(f"Found sizing for {batch_val}: {sizing_res[0].name}")
+                # else:
+                    # print(f"NOT Found sizing for {batch_val}")
+                
+                if sizing_emp:
+                    sizing_op = frappe.db.get_value('Employee', sizing_emp, 'employee_name')
+
+            row[f"Batch {i}"] = batch_val
+            row[f"Batch {i} Qty"] = batch_qty
+            row[f"Sizing Operator {i}"] = sizing_op
+
+        # Filter: only keep if at least one blanking or sizing operator found for realism
+        if any(row[f"Blanking Operator {i}"] for i in range(1, 4)) or any(row[f"Sizing Operator {i}"] for i in range(1, 4)):
+            results.append(row)
+        
+    print(json.dumps(results, indent=2, default=str))
+    return results
+
 # ============================================================================
 # DASHBOARD METRICS API
 # ============================================================================
@@ -3156,3 +3402,92 @@ def _get_product_grouped_pivot_data(data):
             'total_rejected': sum(p['total_rejected'] for p in product_groups.values())
         }
     }
+
+@frappe.whitelist()
+def get_complete_trace_json(mpe_name=None):
+    """
+    Get complete JSON data for MPE, Blanking DC, and Cut Bit Transfer for a given MPE record.
+    If no mpe_name is provided, use a recent submitted record.
+    """
+    if not mpe_name:
+        # Get a recent MPE with docstatus = 1
+        mpe_name = frappe.db.get_value('Moulding Production Entry', 
+                                       {'docstatus': 1}, 
+                                       'name', 
+                                       order_by='creation desc')
+    
+    result = {
+        'mpe_name': mpe_name,
+        'moulding_production_entry': {},
+        'blanking_dc_entries': [],
+        'cut_bit_transfers': []
+    }
+    
+    # Get MPE complete record
+    mpe = frappe.get_doc('Moulding Production Entry', mpe_name)
+    result['moulding_production_entry'] = mpe.as_dict()
+    
+    # Parse batch details to get bins and batches
+    batch_details = []
+    try:
+        batch_details = json.loads(mpe.batch_details or '[]')
+    except:
+        pass
+    
+    # Get Blanking DC Entries for each bin
+    bins = [d.get('bin') for d in batch_details if d.get('bin')]
+    for bin_code in bins:
+        blanking_entries = frappe.get_all('Blanking DC Entry',
+                                         filters={'bin_code': bin_code},
+                                         fields=['*'],
+                                         limit=1,
+                                         order_by='creation desc')
+        result['blanking_dc_entries'].extend(blanking_entries)
+    
+    # Get Cut Bit Transfers for each batch
+    batches = [d.get('spp_batch_number') for d in batch_details if d.get('spp_batch_number')]
+    for batch_no in batches:
+        # Try Material Transfer Item first
+        cbt_names = frappe.db.get_all('Material Transfer Item',
+                                     filters={'spp_batch_no': batch_no, 'parenttype': 'Cut Bit Transfer'},
+                                     fields=['parent'],
+                                     pluck='parent')
+        
+        # Also try manual scan
+        manual_cbt = frappe.db.get_all('Cut Bit Transfer',
+                                      filters={'manual_scan_spp_batch_number': batch_no},
+                                      fields=['name'],
+                                      pluck='name')
+        
+        cbt_names.extend(manual_cbt)
+        cbt_names = list(set(cbt_names))  # Remove duplicates
+        
+        for cbt_name in cbt_names:
+            cbt = frappe.get_doc('Cut Bit Transfer', cbt_name)
+            result['cut_bit_transfers'].append(cbt.as_dict())
+    
+    print(json.dumps(result, indent=2, default=str))
+    return result
+
+@frappe.whitelist()
+def debug_sizing_data():
+    batches = ['26A13X2-1', '26A13X4-1']
+    results = {}
+    for batch in batches:
+        # Check Material Transfer Item
+        mti = frappe.db.get_all('Material Transfer Item', 
+                               filters={'spp_batch_no': batch, 'parenttype': 'Cut Bit Transfer'},
+                               fields=['parent', 'spp_batch_no', 'batch_no'])
+        
+        # Check Cut Bit Transfer manual scan
+        cbt = frappe.db.get_all('Cut Bit Transfer',
+                               filters={'manual_scan_spp_batch_number': batch},
+                               fields=['name', 'manual_scan_spp_batch_number', 'employee'])
+        
+        results[batch] = {
+            'Material Transfer Item': mti,
+            'Cut Bit Transfer (manual)': cbt
+        }
+    
+    print(json.dumps(results, indent=2, default=str))
+    return results
