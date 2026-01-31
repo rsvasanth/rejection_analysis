@@ -204,27 +204,70 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 qty_val = d.get('consumed__qty' if 'consumed__qty' in d else 'qty', "")
                 batch_val = d.get('spp_batch_number', "")
                 
+                batch_val = d.get('spp_batch_number', "")
+                lot_val = d.get('lot_number', "")
+                
                 # Trace Blanking Operator with improved logic
                 if bin_val:
-                    # Match by bin_code AND (item OR batch) AND relevant date
+                    # Match by bin_code AND (item OR batch OR lot) AND creation time
+                    # Logic:
+                    # 1. Try match by bin + item/batch/lot + time
+                    # 2. Fallback to bin + time (most recent)
+                    
+                    # Normalize bin code (handle space inconsistency)
+                    norm_bin = bin_val.replace(" ", "")
+                    mpe_create = mpe['creation']
+                    
                     blanking_sql = """
                         SELECT employee FROM `tabBlanking DC Entry`
-                        WHERE bin_code = %s 
-                        AND (item_produced = %s OR item_to_produce = %s OR t_item_to_produce = %s OR spp_batch_number = %s)
+                        WHERE REPLACE(bin_code, ' ', '') = %s 
                         AND docstatus = 1
-                        AND posting_date <= %s
-                        ORDER BY posting_date DESC, creation DESC LIMIT 1
+                        AND creation <= %s
+                        ORDER BY creation DESC
                     """
-                    blanking_res = frappe.db.sql(blanking_sql, (
-                        bin_val, 
-                        mpe['item_to_produce'], mpe['item_to_produce'], mpe['item_to_produce'],
-                        batch_val,
-                        mpe['moulding_date']
-                    ), as_dict=1)
+                    blanking_list = frappe.db.sql(blanking_sql, (norm_bin, mpe_create), as_dict=1)
                     
-                    if blanking_res:
-                        blanking_emp = blanking_res[0].employee
-                        blanking_op = frappe.db.get_value('Employee', blanking_emp, 'employee_name')
+                    if blanking_list:
+                        # Try to find a record that matches item or batch/lot first
+                        best_match = None
+                        items_to_match = [mpe['item_to_produce']]
+                        # If we have a compound, it might also match
+                        if mpe.get('compound'):
+                            items_to_match.append(mpe['compound'])
+                            
+                        for b_entry in blanking_list:
+                            # Refetch doc to check all fields or use more fields in SQL
+                            # For performance, we'll check fields we already have
+                            # But wait, I only selected employee in the previous query.
+                            # Let's update the SQL to get more fields.
+                            pass
+                        
+                        # Re-run with more fields for better matching
+                        blanking_sql_full = """
+                            SELECT employee, item_produced, item_to_produce, t_item_to_produce, spp_batch_number 
+                            FROM `tabBlanking DC Entry`
+                            WHERE REPLACE(bin_code, ' ', '') = %s 
+                            AND docstatus = 1
+                            AND creation <= %s
+                            ORDER BY creation DESC LIMIT 5
+                        """
+                        candidates = frappe.db.sql(blanking_sql_full, (norm_bin, mpe_create), as_dict=1)
+                        
+                        for c in candidates:
+                            c_items = [c.get('item_produced'), c.get('item_to_produce'), c.get('t_item_to_produce')]
+                            if any(i in items_to_match for i in c_items if i) or \
+                               (batch_val and c.get('spp_batch_number') == batch_val) or \
+                               (lot_val and c.get('spp_batch_number') == lot_val):
+                                best_match = c
+                                break
+                        
+                        # If no strict match found, take the MOST RECENT candidate for this bin
+                        if not best_match and candidates:
+                            best_match = candidates[0]
+                        
+                        if best_match:
+                            blanking_emp = best_match.employee
+                            blanking_op = frappe.db.get_value('Employee', blanking_emp, 'employee_name')
             
             row[f"Bin{i}"] = bin_val
             row[f"Bin{i} Qty"] = qty_val
