@@ -231,8 +231,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             
             row[f"Bin{i}"] = bin_val
             row[f"Bin{i} Qty"] = qty_val
-            if i <= 3:
-                row[f"Blanking Operator {i}"] = blanking_op
+            row[f"Blanking Operator {i}"] = blanking_op
 
         # Batches 1-3
         # In MPE, spp_batch_number is usually unique per row but multiple rows might exist in batch_details
