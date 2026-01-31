@@ -208,25 +208,26 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 lot_val = d.get('lot_number', "")
                 
                 # Trace Blanking Operator using child table Blanking DC Item
-                # The bin_code is in the child table, employee is in the parent
-                # Filter: bin_code + posting_date <= MPE date
+                # The bin_code AND t_item_to_produce are in the child table, employee is in the parent
+                # Filter: bin_code + t_item_to_produce + posting_date <= MPE date
                 # Pick: Most recent one (closest to but not after MPE date)
-                # Note: Don't filter by item as blanks can be made for different items
                 if bin_val:
                     mpe_date = mpe['moulding_date']
+                    item_to_produce = mpe['item_to_produce']
                     
-                    # Query with date <= constraint only
+                    # Query with item filter from CHILD table (bdi.t_item_to_produce)
                     blanking_sql = """
                         SELECT bde.employee, bde.posting_date, bdi.spp_batch_number
                         FROM `tabBlanking DC Item` bdi
                         JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
                         WHERE bdi.bin_code = %s
+                        AND bdi.t_item_to_produce = %s
                         AND bde.docstatus = 1
                         AND bde.posting_date <= %s
                         ORDER BY bde.posting_date DESC, bde.creation DESC
                         LIMIT 1
                     """
-                    blanking_res = frappe.db.sql(blanking_sql, (bin_val, mpe_date), as_dict=1)
+                    blanking_res = frappe.db.sql(blanking_sql, (bin_val, item_to_produce, mpe_date), as_dict=1)
                     
                     if blanking_res and blanking_res[0].employee:
                         blanking_op = frappe.db.get_value('Employee', blanking_res[0].employee, 'employee_name')
