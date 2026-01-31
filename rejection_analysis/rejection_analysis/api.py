@@ -190,7 +190,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             "Item": mpe['item_to_produce'],
             "Mould Ref": mpe['mould_reference'],
             "No. of Lifts": mpe['number_of_lifts'],
-            "Press Operator": mpe['employee_name']
+            "Press Operator": mpe['operator']
         }
 
         # Bins 1-5
@@ -230,7 +230,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                     blanking_res = frappe.db.sql(blanking_sql, (bin_val, item_to_produce, mpe_date), as_dict=1)
                     
                     if blanking_res and blanking_res[0].employee:
-                        blanking_op = frappe.db.get_value('Employee', blanking_res[0].employee, 'employee_name')
+                        blanking_op = blanking_res[0].employee
             
             row[f"Bin{i}"] = bin_val
             row[f"Bin{i} Qty"] = qty_val
@@ -298,7 +298,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                     cbt_count = cbt_count_res[0][0] or 0
                 
                 if sizing_emp:
-                    sizing_op = frappe.db.get_value('Employee', sizing_emp, 'employee_name')
+                    sizing_op = sizing_emp
 
             row[f"Batch {i}"] = batch_val
             row[f"Batch {i} Qty"] = batch_qty
