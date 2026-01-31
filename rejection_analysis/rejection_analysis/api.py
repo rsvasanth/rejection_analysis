@@ -209,19 +209,21 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 
                 # Trace Blanking Operator using child table Blanking DC Item
                 # The bin_code is in the child table, employee is in the parent
-                # Find the entry with posting_date CLOSEST to the MPE moulding_date
+                # Filter: bin_code + posting_date <= MPE date
+                # Pick: Most recent one (closest to but not after MPE date)
+                # Note: Don't filter by item as blanks can be made for different items
                 if bin_val:
                     mpe_date = mpe['moulding_date']
                     
-                    # Query child table joined with parent to get employee
-                    # Order by absolute date difference to find closest match
+                    # Query with date <= constraint only
                     blanking_sql = """
                         SELECT bde.employee, bde.posting_date, bdi.spp_batch_number
                         FROM `tabBlanking DC Item` bdi
                         JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
                         WHERE bdi.bin_code = %s
                         AND bde.docstatus = 1
-                        ORDER BY ABS(DATEDIFF(bde.posting_date, %s)), bde.creation DESC
+                        AND bde.posting_date <= %s
+                        ORDER BY bde.posting_date DESC, bde.creation DESC
                         LIMIT 1
                     """
                     blanking_res = frappe.db.sql(blanking_sql, (bin_val, mpe_date), as_dict=1)
