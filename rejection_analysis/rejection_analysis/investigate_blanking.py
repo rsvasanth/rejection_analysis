@@ -2,25 +2,29 @@ import frappe
 import json
 
 def investigate():
-    bin_code = 'BLB-00206'
-    lots = ['25J08U06']
+    bin_code = 'BLB -00068'
+    lot_no = '25K04V03'
     
     print(f"Investigating Bin: {bin_code}")
     
     # Get Blanking DC Entries for this bin
-    entries = frappe.db.get_all('Blanking DC Entry', 
-                               filters={'bin_code': bin_code}, 
-                               fields=['name', 'bin_code', 'item_produced', 'item_to_produce', 't_item_to_produce', 'spp_batch_number', 'employee', 'posting_date', 'creation', 'docstatus'], 
-                               order_by='creation desc', 
-                               limit=10)
+    # Use REPLACE to match bin codes with/without spaces
+    entries = frappe.db.sql("""
+        SELECT name, bin_code, item_produced, item_to_produce, t_item_to_produce, spp_batch_number, employee, posting_date, creation, docstatus 
+        FROM `tabBlanking DC Entry` 
+        WHERE REPLACE(bin_code, ' ', '') = %s
+        ORDER BY creation desc 
+        LIMIT 20
+    """, (bin_code.replace(' ', ''),), as_dict=1)
     
-    print("\nRecent Blanking DC Entries for Bin:")
-    print(json.dumps(entries, indent=4, default=str))
+    print("\nMatches for Bin (Normalized):")
+    for e in entries:
+        print(f"Name: {e.name}, Item: {e.item_produced}, Batch: {e.spp_batch_number}, Created: {e.creation}, Status: {e.docstatus}")
     
     # Get MPE for the lot
     mpe = frappe.db.get_value('Moulding Production Entry', 
-                             {'scan_lot_number': '25J08U06'}, 
-                             ['name', 'moulding_date', 'item_to_produce', 'batch_details', 'creation'], 
+                             {'scan_lot_number': lot_no}, 
+                             ['name', 'moulding_date', 'item_to_produce', 'batch_details', 'creation', 'compound'], 
                              as_dict=1)
     
     if mpe:
