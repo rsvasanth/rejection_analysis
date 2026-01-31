@@ -160,14 +160,17 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
         # To date only
         filters['moulding_date'] = ['<=', to_date]
     
+    # Increase fetching buffer to ensure we meet the requested limit after filtering
+    fetch_limit = int(limit) * 4 if limit else 200
+    
     mpe_list = frappe.db.get_list('Moulding Production Entry', 
                            filters=filters, 
-                           fields=['name','moulding_date','scan_lot_number','operator','employee_name','job_card','batch_details','number_of_lifts','mould_reference','item_to_produce'], 
-                           limit=50, order_by='creation desc')
+                           fields=['name','moulding_date','scan_lot_number','operator','employee_name','job_card','batch_details','number_of_lifts','mould_reference','item_to_produce', 'creation'], 
+                           limit=fetch_limit, order_by='creation desc')
     
     results = []
     for mpe in mpe_list:
-        if len(results) >= limit: break
+        if len(results) >= int(limit or 5): break
         
         # Get shift
         shift = frappe.db.get_value('Job Card', mpe['job_card'], 'shift_number') if mpe.get('job_card') else ""
@@ -199,10 +202,28 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 d = batch_details[i-1]
                 bin_val = d.get('bin', "")
                 qty_val = d.get('consumed__qty' if 'consumed__qty' in d else 'qty', "")
-                # Trace Blanking Operator
+                batch_val = d.get('spp_batch_number', "")
+                
+                # Trace Blanking Operator with improved logic
                 if bin_val:
-                    blanking_emp = frappe.db.get_value('Blanking DC Entry', {'bin_code': bin_val}, 'employee')
-                    if blanking_emp:
+                    # Match by bin_code AND (item OR batch) AND relevant date
+                    blanking_sql = """
+                        SELECT employee FROM `tabBlanking DC Entry`
+                        WHERE bin_code = %s 
+                        AND (item_produced = %s OR item_to_produce = %s OR t_item_to_produce = %s OR spp_batch_number = %s)
+                        AND docstatus = 1
+                        AND posting_date <= %s
+                        ORDER BY posting_date DESC, creation DESC LIMIT 1
+                    """
+                    blanking_res = frappe.db.sql(blanking_sql, (
+                        bin_val, 
+                        mpe['item_to_produce'], mpe['item_to_produce'], mpe['item_to_produce'],
+                        batch_val,
+                        mpe['moulding_date']
+                    ), as_dict=1)
+                    
+                    if blanking_res:
+                        blanking_emp = blanking_res[0].employee
                         blanking_op = frappe.db.get_value('Employee', blanking_emp, 'employee_name')
             
             row[f"Bin{i}"] = bin_val
