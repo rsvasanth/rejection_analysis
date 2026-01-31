@@ -48,6 +48,9 @@ interface TraceabilityItem {
     'Sizing Operator 1': string
     'Sizing Operator 2': string
     'Sizing Operator 3': string
+    'Cutbit Entry 1': string
+    'Cutbit Entry 2': string
+    'Cutbit Entry 3': string
 }
 
 export function Component() {
@@ -104,7 +107,7 @@ export function Component() {
 
         // Add dynamic batch columns
         for (let i = 1; i <= maxBatches; i++) {
-            headers.push(`Batch ${i}`, `Batch ${i} Qty`, `Sizing Operator ${i}`)
+            headers.push(`Batch ${i}`, `Batch ${i} Qty`, `Sizing Operator ${i}`, `Cutbit Entry ${i}`)
         }
 
         let csvContent = headers.join(',') + '\n'
@@ -133,7 +136,8 @@ export function Component() {
                 const batch = item[`Batch ${i}` as keyof TraceabilityItem] || ''
                 const qty = item[`Batch ${i} Qty` as keyof TraceabilityItem] || ''
                 const op = item[`Sizing Operator ${i}` as keyof TraceabilityItem] || ''
-                row.push(batch, qty, op)
+                const cbt = item[`Cutbit Entry ${i}` as keyof TraceabilityItem] || ''
+                row.push(batch, qty, op, cbt)
             }
 
             const escapedRow = row.map(value => {
@@ -351,7 +355,8 @@ export function Component() {
                                                     headers.push(
                                                         <TableHead key={`batch${i}`}>Batch {i}</TableHead>,
                                                         <TableHead key={`batchqty${i}`}>Batch {i} Qty</TableHead>,
-                                                        <TableHead key={`sizingop${i}`}>Sizing Op {i}</TableHead>
+                                                        <TableHead key={`sizingop${i}`}>Sizing Op {i}</TableHead>,
+                                                        <TableHead key={`cbt${i}`}>Cutbit Entry {i}</TableHead>
                                                     )
                                                 }
 
@@ -385,6 +390,7 @@ export function Component() {
                                                             <TableCell key={`batch${i}`} className="text-xs">{row[`Batch ${i}` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`batchqty${i}`} className="text-xs">{row[`Batch ${i} Qty` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`sizingop${i}`} className="text-xs">{row[`Sizing Operator ${i}` as keyof TraceabilityItem]}</TableCell>
+                                                            <TableCell key={`cbt${i}`} className="text-xs">{row[`Cutbit Entry ${i}` as keyof TraceabilityItem]}</TableCell>
                                                         </>
                                                     ))}
                                                 </TableRow>

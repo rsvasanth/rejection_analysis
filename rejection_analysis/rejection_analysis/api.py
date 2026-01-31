@@ -269,11 +269,10 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 sizing_res = frappe.db.sql(sizing_sql, (batch_val, batch_val), as_dict=1)
                 
                 sizing_emp = ""
+                cbt_name = ""
                 if sizing_res:
                     sizing_emp = sizing_res[0].employee
-                    # print(f"Found sizing for {batch_val}: {sizing_res[0].name}")
-                # else:
-                    # print(f"NOT Found sizing for {batch_val}")
+                    cbt_name = sizing_res[0].name
                 
                 if sizing_emp:
                     sizing_op = frappe.db.get_value('Employee', sizing_emp, 'employee_name')
@@ -281,6 +280,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             row[f"Batch {i}"] = batch_val
             row[f"Batch {i} Qty"] = batch_qty
             row[f"Sizing Operator {i}"] = sizing_op
+            row[f"Cutbit Entry {i}"] = cbt_name
 
         # Filter: only keep if at least one blanking or sizing operator found for realism
         if any(row[f"Blanking Operator {i}"] for i in range(1, 4)) or any(row[f"Sizing Operator {i}"] for i in range(1, 4)):
