@@ -209,18 +209,19 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 
                 # Trace Blanking Operator using child table Blanking DC Item
                 # The bin_code is in the child table, employee is in the parent
+                # Find the entry with posting_date CLOSEST to the MPE moulding_date
                 if bin_val:
                     mpe_date = mpe['moulding_date']
                     
                     # Query child table joined with parent to get employee
+                    # Order by absolute date difference to find closest match
                     blanking_sql = """
                         SELECT bde.employee, bde.posting_date, bdi.spp_batch_number
                         FROM `tabBlanking DC Item` bdi
                         JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
                         WHERE bdi.bin_code = %s
                         AND bde.docstatus = 1
-                        AND bde.posting_date <= %s
-                        ORDER BY bde.posting_date DESC, bde.creation DESC
+                        ORDER BY ABS(DATEDIFF(bde.posting_date, %s)), bde.creation DESC
                         LIMIT 1
                     """
                     blanking_res = frappe.db.sql(blanking_sql, (bin_val, mpe_date), as_dict=1)
@@ -271,10 +272,28 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 sizing_res = frappe.db.sql(sizing_sql, (batch_val, batch_val), as_dict=1)
                 
                 sizing_emp = ""
-                cbt_name = ""
+                cbt_count = 0
                 if sizing_res:
                     sizing_emp = sizing_res[0].employee
-                    cbt_name = sizing_res[0].name
+                
+                # Count the number of Cut Bit Transfer entries for this batch
+                cbt_count_sql = """
+                    SELECT COUNT(DISTINCT combined.name) as cnt FROM (
+                        SELECT cbt.name
+                        FROM `tabMaterial Transfer Item` mti
+                        JOIN `tabCut Bit Transfer` cbt ON cbt.name = mti.parent
+                        WHERE mti.spp_batch_no = %s AND cbt.docstatus = 1
+                        
+                        UNION
+                        
+                        SELECT name
+                        FROM `tabCut Bit Transfer`
+                        WHERE manual_scan_spp_batch_number = %s AND docstatus = 1
+                    ) combined
+                """
+                cbt_count_res = frappe.db.sql(cbt_count_sql, (batch_val, batch_val))
+                if cbt_count_res:
+                    cbt_count = cbt_count_res[0][0] or 0
                 
                 if sizing_emp:
                     sizing_op = frappe.db.get_value('Employee', sizing_emp, 'employee_name')
@@ -282,7 +301,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             row[f"Batch {i}"] = batch_val
             row[f"Batch {i} Qty"] = batch_qty
             row[f"Sizing Operator {i}"] = sizing_op
-            row[f"Cutbit Entry {i}"] = cbt_name
+            row[f"Cutbit Entry {i}"] = cbt_count
 
         # Filter: only keep if at least one blanking or sizing operator found for realism
         if any(row[f"Blanking Operator {i}"] for i in range(1, 4)) or any(row[f"Sizing Operator {i}"] for i in range(1, 4)):
