@@ -14,7 +14,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Calendar, Download, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Calendar, Download, Users, AlertCircle } from 'lucide-react'
 import { useFrappePostCall } from 'frappe-react-sdk'
 import { toast } from 'sonner'
 
@@ -39,6 +46,13 @@ interface TraceabilityItem {
     'Blanking Operator 1': string
     'Blanking Operator 2': string
     'Blanking Operator 3': string
+    'Blanking Operator 4': string
+    'Blanking Operator 5': string
+    'Blanking Op 1 Prepared': string
+    'Blanking Op 2 Prepared': string
+    'Blanking Op 3 Prepared': string
+    'Blanking Op 4 Prepared': string
+    'Blanking Op 5 Prepared': string
     'Batch 1': string
     'Batch 2': string
     'Batch 3': string
@@ -48,9 +62,9 @@ interface TraceabilityItem {
     'Sizing Operator 1': string
     'Sizing Operator 2': string
     'Sizing Operator 3': string
-    'Cutbit Entry 1': string
-    'Cutbit Entry 2': string
-    'Cutbit Entry 3': string
+    'Cutbit Entry 1': string | number
+    'Cutbit Entry 2': string | number
+    'Cutbit Entry 3': string | number
 }
 
 export function Component() {
@@ -97,12 +111,12 @@ export function Component() {
         const { maxBins, maxBatches } = getMaxColumns()
 
         const headers = [
-            'Date', 'Shift', 'Lot No', 'Item', 'Mould Ref', 'No. of Lifts', 'Press Operator',
+            'Date', 'Shift', 'Lot No', 'Lot Time', 'Item', 'Mould Ref', 'No. of Lifts', 'Press Operator',
         ]
 
         // Add dynamic bin columns
         for (let i = 1; i <= maxBins; i++) {
-            headers.push(`Bin${i}`, `Bin${i} Qty`, `Blanking Operator ${i}`)
+            headers.push(`Bin${i}`, `Bin${i} Qty`, `Blanking Operator ${i}`, `Blanking Op ${i} Prepared`)
         }
 
         // Add dynamic batch columns
@@ -117,6 +131,7 @@ export function Component() {
                 item.Date,
                 item.Shift,
                 item['Lot No'],
+                item['Lot Time'],
                 item.Item,
                 item['Mould Ref'],
                 item['No. of Lifts'],
@@ -128,7 +143,8 @@ export function Component() {
                 const bin = item[`Bin${i}` as keyof TraceabilityItem] || ''
                 const qty = item[`Bin${i} Qty` as keyof TraceabilityItem] || ''
                 const op = item[`Blanking Operator ${i}` as keyof TraceabilityItem] || ''
-                row.push(bin, qty, op)
+                const opPrep = item[`Blanking Op ${i} Prepared` as keyof TraceabilityItem] || ''
+                row.push(bin, qty, op, opPrep)
             }
 
             // Add batch data
@@ -184,6 +200,49 @@ export function Component() {
         })
 
         return { maxBins, maxBatches }
+    }
+
+    const renderOperator = (opStr: string, prepDate?: string) => {
+        if (!opStr) return ""
+
+        const isOutOfWindow = opStr.includes("(Not in 5d window)")
+        const id = opStr.replace("(Not in 5d window)", "").trim()
+
+        return (
+            <div className="flex flex-col gap-1 items-start">
+                <span>{id}</span>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <div className="flex gap-1 items-center">
+                                {isOutOfWindow && (
+                                    <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4 cursor-help">
+                                        <AlertCircle className="h-2 w-2 mr-1" />
+                                        Window Alert
+                                    </Badge>
+                                )}
+                                {prepDate && !isOutOfWindow && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-50/50 text-blue-700 border-blue-200">
+                                        Trace Found
+                                    </Badge>
+                                )}
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[200px]">
+                            <div className="space-y-1">
+                                <p className="font-semibold text-xs border-b pb-1">Tracing Details</p>
+                                {prepDate && <p className="text-[10px]">Prepared: {prepDate}</p>}
+                                {isOutOfWindow ? (
+                                    <p className="text-[10px] text-destructive">Blanking DC created more than 5 days before production</p>
+                                ) : (
+                                    <p className="text-[10px] text-muted-foreground">Preparation within 5-day window</p>
+                                )}
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+        )
     }
 
     return (
@@ -337,8 +396,11 @@ export function Component() {
                                             <TableHead>Date</TableHead>
                                             <TableHead>Shift</TableHead>
                                             <TableHead>Lot No</TableHead>
+                                            <TableHead>Lot Time</TableHead>
                                             <TableHead>Item</TableHead>
-                                            <TableHead>Press Operator</TableHead>
+                                            <TableHead>Mould</TableHead>
+                                            <TableHead>Lifts</TableHead>
+                                            <TableHead>Press Op</TableHead>
                                             {(() => {
                                                 const { maxBins, maxBatches } = getMaxColumns()
                                                 const headers = []
@@ -347,7 +409,8 @@ export function Component() {
                                                     headers.push(
                                                         <TableHead key={`bin${i}`}>Bin{i}</TableHead>,
                                                         <TableHead key={`binqty${i}`}>Bin{i} Qty</TableHead>,
-                                                        <TableHead key={`blankop${i}`}>Blanking Op {i}</TableHead>
+                                                        <TableHead key={`blankop${i}`}>Blanking Op {i}</TableHead>,
+                                                        <TableHead key={`blankopprep${i}`}>Blanking Op {i} Prepared</TableHead>
                                                     )
                                                 }
 
@@ -372,21 +435,32 @@ export function Component() {
                                                     <TableCell className="text-xs">{row.Date}</TableCell>
                                                     <TableCell className="text-xs">{row.Shift}</TableCell>
                                                     <TableCell className="font-medium text-xs">{row['Lot No']}</TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{row['Lot Time']}</TableCell>
                                                     <TableCell className="text-xs">{row.Item}</TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground">{row['Mould Ref']}</TableCell>
+                                                    <TableCell className="text-xs text-center font-mono">{row['No. of Lifts']}</TableCell>
                                                     <TableCell className="text-xs">{row['Press Operator']}</TableCell>
 
                                                     {/* Dynamic Bin Columns */}
                                                     {Array.from({ length: maxBins }, (_, i) => i + 1).map(i => (
-                                                        <>
+                                                        <React.Fragment key={`bin_frag_${i}`}>
                                                             <TableCell key={`bin${i}`} className="text-xs">{row[`Bin${i}` as keyof TraceabilityItem]}</TableCell>
-                                                            <TableCell key={`binqty${i}`} className="text-xs">{row[`Bin${i} Qty` as keyof TraceabilityItem]}</TableCell>
-                                                            <TableCell key={`blankop${i}`} className="text-xs">{row[`Blanking Operator ${i}` as keyof TraceabilityItem]}</TableCell>
-                                                        </>
+                                                            <TableCell key={`binqty${i}`} className="text-xs text-right whitespace-nowrap">{row[`Bin${i} Qty` as keyof TraceabilityItem]}</TableCell>
+                                                            <TableCell key={`blankop${i}`} className="text-xs">
+                                                                {renderOperator(
+                                                                    row[`Blanking Operator ${i}` as keyof TraceabilityItem] as string,
+                                                                    row[`Blanking Op ${i} Prepared` as keyof TraceabilityItem] as string
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell key={`blankopprep${i}`} className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                {row[`Blanking Op ${i} Prepared` as keyof TraceabilityItem]}
+                                                            </TableCell>
+                                                        </React.Fragment>
                                                     ))}
 
                                                     {/* Dynamic Batch Columns */}
                                                     {Array.from({ length: maxBatches }, (_, i) => i + 1).map(i => (
-                                                        <>
+                                                        <React.Fragment key={`batch_frag_${i}`}>
                                                             <TableCell key={`batch${i}`} className="text-xs">{row[`Batch ${i}` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`batchqty${i}`} className="text-xs">{row[`Batch ${i} Qty` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`sizingop${i}`} className="text-xs">{row[`Sizing Operator ${i}` as keyof TraceabilityItem]}</TableCell>

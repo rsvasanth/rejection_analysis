@@ -20,7 +20,48 @@ import json
 import re
 from datetime import datetime, timedelta
 from frappe import _
-from frappe.utils import today, getdate, flt, add_days, nowdate
+from frappe.utils import today, getdate, flt, add_days, nowdate, get_datetime
+
+def decode_lot_number(lot_no):
+    """
+    Decodes Lot Number (YYMDDSSNN) into production start and end timestamps.
+    YY: Year (26 -> 2026)
+    M: Month (A=Jan, B=Feb, ..., L=Dec)
+    DD: Day (01-31)
+    S: Shift (X=8H-1, Y=8H-2, Z=8H-3, U=12H-1, V=12H-2)
+    """
+    if not lot_no or len(lot_no) < 6:
+        return None, None
+        
+    try:
+        # Extract components
+        year_code = lot_no[0:2]
+        month_code = lot_no[2].upper()
+        day_code = lot_no[3:5]
+        shift_code = lot_no[5].upper() if len(lot_no) >= 6 else 'X'
+        
+        year = int(f"20{year_code}")
+        month = ord(month_code) - ord('A') + 1
+        day = int(day_code)
+        
+        # Shift start times and durations (hours)
+        shift_data = {
+            'X': ('06:00:00', 8),
+            'Y': ('14:00:00', 8),
+            'Z': ('22:00:00', 8),
+            'U': ('06:00:00', 12),
+            'V': ('18:00:00', 12),
+        }
+        
+        start_time_str, duration = shift_data.get(shift_code, ('06:00:00', 8))
+        
+        start_dt = get_datetime(f"{year}-{month:02d}-{day:02d} {start_time_str}")
+        end_dt = start_dt + timedelta(hours=duration)
+        
+        return start_dt, end_dt
+    except Exception as e:
+        return None, None
+
 
 @frappe.whitelist()
 def get_sample_mpe_data(limit=50):
@@ -172,6 +213,9 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
     for mpe in mpe_list:
         if len(results) >= int(limit or 5): break
         
+        # Decode lot for production time
+        prod_start, prod_end = decode_lot_number(mpe['scan_lot_number'])
+        
         # Get shift
         shift = frappe.db.get_value('Job Card', mpe['job_card'], 'shift_number') if mpe.get('job_card') else ""
         
@@ -187,6 +231,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             "Date": mpe['moulding_date'],
             "Shift": shift,
             "Lot No": mpe['scan_lot_number'],
+            "Lot Time": prod_start.strftime("%Y-%m-%d %H:%M") if prod_start else "",
             "Item": mpe['item_to_produce'],
             "Mould Ref": mpe['mould_reference'],
             "No. of Lifts": mpe['number_of_lifts'],
@@ -198,6 +243,7 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
             bin_val = ""
             qty_val = ""
             blanking_op = ""
+            blanking_created = ""
             if len(batch_details) >= i:
                 d = batch_details[i-1]
                 bin_val = d.get('bin', "")
@@ -209,32 +255,64 @@ def get_traceable_sample_set(limit=5, from_date=None, to_date=None, date=None):
                 
                 # Trace Blanking Operator using child table Blanking DC Item
                 # The bin_code AND t_item_to_produce are in the child table, employee is in the parent
-                # Filter: bin_code + t_item_to_produce + posting_date <= MPE date
-                # Pick: Most recent one (closest to but not after MPE date)
+                # Filter: bin_code + t_item_to_produce + creation <= shift_end_timestamp
+                # Window: within 5 days before shift_start_timestamp
                 if bin_val:
-                    mpe_date = mpe['moulding_date']
-                    item_to_produce = mpe['item_to_produce']
+                    # Get production timestamps from Lot Number
+                    prod_start, prod_end = decode_lot_number(mpe['scan_lot_number'])
                     
-                    # Query with item filter from CHILD table (bdi.t_item_to_produce)
-                    blanking_sql = """
-                        SELECT bde.employee, bde.posting_date, bdi.spp_batch_number
-                        FROM `tabBlanking DC Item` bdi
-                        JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
-                        WHERE bdi.bin_code = %s
-                        AND bdi.t_item_to_produce = %s
-                        AND bde.docstatus = 1
-                        AND bde.posting_date <= %s
-                        ORDER BY bde.posting_date DESC, bde.creation DESC
-                        LIMIT 1
-                    """
-                    blanking_res = frappe.db.sql(blanking_sql, (bin_val, item_to_produce, mpe_date), as_dict=1)
-                    
-                    if blanking_res and blanking_res[0].employee:
-                        blanking_op = blanking_res[0].employee
+                    if prod_start:
+                        # 5 days window relative to shift start
+                        window_start = prod_start - timedelta(days=5)
+                        
+                        # Query with creation timestamp filter up to shift end
+                        blanking_sql = """
+                            SELECT bde.employee, bde.creation, bde.name
+                            FROM `tabBlanking DC Item` bdi
+                            JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
+                            WHERE bdi.bin_code = %s
+                            AND bdi.t_item_to_produce = %s
+                            AND bde.docstatus = 1
+                            AND bde.creation <= %s
+                            ORDER BY bde.creation DESC
+                            LIMIT 1
+                        """
+                        blanking_res = frappe.db.sql(blanking_sql, (bin_val, mpe['item_to_produce'], prod_end), as_dict=1)
+                        
+                        if blanking_res and blanking_res[0].employee:
+                            emp_id = blanking_res[0].employee
+                            creation_time = blanking_res[0].creation
+                            blanking_created = creation_time.strftime("%Y-%m-%d %H:%M")
+                            
+                            # Check if within 5 days window
+                            if creation_time >= window_start:
+                                blanking_op = emp_id
+                            else:
+                                blanking_op = f"{emp_id} (Not in 5d window)"
+                    else:
+                        # Fallback to posting_date if lot decoding fails
+                        mpe_date = mpe['moulding_date']
+                        blanking_sql = """
+                            SELECT bde.employee, bde.creation
+                            FROM `tabBlanking DC Item` bdi
+                            JOIN `tabBlanking DC Entry` bde ON bdi.parent = bde.name
+                            WHERE bdi.bin_code = %s
+                            AND bdi.t_item_to_produce = %s
+                            AND bde.docstatus = 1
+                            AND bde.posting_date <= %s
+                            ORDER BY bde.posting_date DESC, bde.creation DESC
+                            LIMIT 1
+                        """
+                        blanking_res = frappe.db.sql(blanking_sql, (bin_val, mpe['item_to_produce'], mpe_date), as_dict=1)
+                        if blanking_res and blanking_res[0].employee:
+                            blanking_op = blanking_res[0].employee
+                            if blanking_res[0].creation:
+                                blanking_created = blanking_res[0].creation.strftime("%Y-%m-%d %H:%M")
             
             row[f"Bin{i}"] = bin_val
             row[f"Bin{i} Qty"] = qty_val
             row[f"Blanking Operator {i}"] = blanking_op
+            row[f"Blanking Op {i} Prepared"] = blanking_created
 
         # Batches 1-3
         # In MPE, spp_batch_number is usually unique per row but multiple rows might exist in batch_details
