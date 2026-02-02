@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { DashboardLayout } from '@/components/dashboard-layout'
 import { SiteHeader } from '@/components/site-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -465,7 +465,7 @@ export function Component() {
                                                             <TableCell key={`batchqty${i}`} className="text-xs">{row[`Batch ${i} Qty` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`sizingop${i}`} className="text-xs">{row[`Sizing Operator ${i}` as keyof TraceabilityItem]}</TableCell>
                                                             <TableCell key={`cbt${i}`} className="text-xs">{row[`Cutbit Entry ${i}` as keyof TraceabilityItem]}</TableCell>
-                                                        </>
+                                                        </React.Fragment>
                                                     ))}
                                                 </TableRow>
                                             )
